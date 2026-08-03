@@ -12,10 +12,18 @@ const VIEW = 'vw_llegadas_tarde'
 const pct = (num: number, den: number) =>
   den > 0 ? `${((num / den) * 100).toFixed(1)}%` : '—'
 
+// Formatea 'YYYY-MM-DD' -> '08 abr 2026' (sin líos de zona horaria)
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const fmtFecha = (iso?: string | null) => {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-')
+  return `${d} ${MESES[Number(m) - 1]} ${y}`
+}
+
 export default async function AsistenciaPage() {
   const supabase = await createClient()
 
-  const [totalRes, evaluableRes, tardeRes] = await Promise.all([
+  const [totalRes, evaluableRes, tardeRes, minRes, maxRes] = await Promise.all([
     // Total de marcas en la vista (histórico completo)
     supabase.from(VIEW).select('*', { count: 'exact', head: true }),
     // Evaluables = con horario oficial (estado_horario 'mapeado')
@@ -29,6 +37,10 @@ export default async function AsistenciaPage() {
       .select('*', { count: 'exact', head: true })
       .eq('estado_horario', 'mapeado')
       .eq('llego_tarde', true),
+    // Fecha más antigua del histórico
+    supabase.from(VIEW).select('fecha_entrada').order('fecha_entrada', { ascending: true }).limit(1),
+    // Fecha más reciente del histórico
+    supabase.from(VIEW).select('fecha_entrada').order('fecha_entrada', { ascending: false }).limit(1),
   ])
 
   const err = totalRes.error || evaluableRes.error || tardeRes.error
@@ -38,12 +50,15 @@ export default async function AsistenciaPage() {
   const tarde = tardeRes.count ?? 0
   const aTiempo = evaluable - tarde
 
+  const desde = fmtFecha(minRes.data?.[0]?.fecha_entrada)
+  const hasta = fmtFecha(maxRes.data?.[0]?.fecha_entrada)
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Asistencia</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Puntualidad sobre histórico completo · Electroingeniería S.A.S.
+          Puntualidad · datos del {desde} al {hasta} · Electroingeniería S.A.S.
         </p>
       </div>
 
