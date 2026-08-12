@@ -2,9 +2,7 @@
 // Componente Sidebar - Navegación lateral colapsable
 // Gestión Humana Analytics · Electroingeniería
 // ═══════════════════════════════════════════════════════════
-
 'use client'
-
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -14,21 +12,20 @@ import {
   Users,
   CalendarCheck,
   UserX,
+  Clock,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/empleados', label: 'Empleados', icon: Users },
   { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck },
+  { href: '/asistencia/administrativos', label: 'Puntualidad Admin', icon: Clock },
   { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
 ]
-
 export default function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
-
   return (
     <aside
       className={`bg-white border-r border-gray-200 h-screen sticky top-0 transition-all duration-300 ${
@@ -55,13 +52,11 @@ export default function Sidebar() {
           />
         )}
       </div>
-
       {/* Navegación */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
-
           return (
             <Link
               key={item.href}
@@ -79,7 +74,6 @@ export default function Sidebar() {
           )
         })}
       </nav>
-
       {/* Botón colapsar */}
       <button
         onClick={() => setCollapsed(!collapsed)}
