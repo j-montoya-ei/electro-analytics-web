@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════════════════════
-// Puntualidad Administrativos - KPIs + desglose por área + detalle tarde
-// Universo: horario ADMON L-V, entrada de mañana (sin marcas de tarde).
+// Puntualidad - KPIs + tabla por proceso expandible.
+// Hoy: personal administrativo (ADMON L-V), entrada de mañana.
+// (a futuro se amplía a toda la empresa)
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
-import DataTable from '@/components/DataTable'
 import KpiCard from '@/components/KpiCard'
+import ProcesoTabla, { FilaProceso } from '@/components/ProcesoTabla'
 import { Clock, UserCheck, AlertTriangle, Database } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -22,10 +23,10 @@ const fmtFecha = (f?: string | null) =>
       })
     : '—'
 
-export default async function AsistenciaAdministrativosPage() {
+export default async function PuntualidadPage() {
   const supabase = await createClient()
 
-  const [totalRes, tardeRes, minRes, maxRes, area, tarde] = await Promise.all([
+  const [totalRes, tardeRes, minRes, maxRes, area, lateRows] = await Promise.all([
     supabase.from(ADMIN_VIEW).select('*', { count: 'exact', head: true }).eq('momento', 'entrada'),
     supabase
       .from(ADMIN_VIEW)
@@ -49,11 +50,10 @@ export default async function AsistenciaAdministrativosPage() {
     supabase.from(AREA_VIEW).select('*'),
     supabase
       .from(ADMIN_VIEW)
-      .select('nombre_completo, area, fecha_entrada, hora_real, minutos_retraso')
+      .select('nombre_completo, area')
       .eq('momento', 'entrada')
       .eq('llego_tarde', true)
-      .order('fecha_entrada', { ascending: false })
-      .limit(500),
+      .limit(1000),
   ])
 
   const total = totalRes.count ?? 0
@@ -61,21 +61,37 @@ export default async function AsistenciaAdministrativosPage() {
   const aTiempo = total - tardeN
   const pct = total > 0 ? ((aTiempo / total) * 100).toFixed(1) + '%' : '—'
 
-  const areaRows = (area.data ?? []).map((r) => ({
-    'Área': r.proceso,
-    'Evaluadas': r.total_evaluable,
-    'Tarde': r.llegadas_tarde,
-    'A tiempo': r.a_tiempo,
-    '% Puntualidad': Number(r.pct_puntualidad),
-    'Prom. min. tarde': r.min_promedio_retraso == null ? '—' : Number(r.min_promedio_retraso),
-  }))
+  // Agrupar las llegadas tarde por área → conteo por persona
+  const porArea = new Map<string, Map<string, number>>()
+  for (const r of lateRows.data ?? []) {
+    const a = r.area ?? '—'
+    const m = porArea.get(a) ?? new Map<string, number>()
+    m.set(r.nombre_completo, (m.get(r.nombre_completo) ?? 0) + 1)
+    porArea.set(a, m)
+  }
+
+  const filas: FilaProceso[] = (area.data ?? []).map((b) => {
+    const m = porArea.get(b.proceso) ?? new Map<string, number>()
+    const personas = [...m.entries()]
+      .map(([nombre, tardanzas]) => ({ nombre, tardanzas }))
+      .sort((x, y) => y.tardanzas - x.tardanzas)
+    return {
+      proceso: b.proceso,
+      evaluadas: b.total_evaluable,
+      tarde: b.llegadas_tarde,
+      aTiempo: b.a_tiempo,
+      pct: Number(b.pct_puntualidad),
+      promMin: b.min_promedio_retraso == null ? null : Number(b.min_promedio_retraso),
+      personas,
+    }
+  })
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Puntualidad Administrativos</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Puntualidad</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Turno ADMON L-V · entrada 07:30 (gracia 07:37) ·{' '}
+          Personal administrativo (ADMON L-V) · entrada 07:30 (gracia 07:37) ·{' '}
           {fmtFecha(minRes.data?.fecha_entrada)} a {fmtFecha(maxRes.data?.fecha_entrada)}
         </p>
       </div>
@@ -88,21 +104,9 @@ export default async function AsistenciaAdministrativosPage() {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Puntualidad por área</h3>
-        <DataTable
-          data={areaRows}
-          searchPlaceholder="Buscar área..."
-          emptyMessage="Sin datos por área."
-        />
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Detalle de llegadas tarde</h3>
-        <DataTable
-          data={tarde.data ?? []}
-          searchPlaceholder="Buscar por nombre, área..."
-          emptyMessage="No hay llegadas tarde registradas."
-        />
+        <h3 className="text-lg font-semibold text-gray-900">Puntualidad por proceso</h3>
+        <p className="text-xs text-gray-500">Clic en un proceso para ver quién llega tarde.</p>
+        <ProcesoTabla filas={filas} />
       </div>
 
       <p className="text-xs text-gray-500">
