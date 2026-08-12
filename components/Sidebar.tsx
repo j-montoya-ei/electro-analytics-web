@@ -20,7 +20,7 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/empleados', label: 'Empleados', icon: Users },
   { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck },
-  { href: '/asistencia/administrativos', label: 'Puntualidad Admin', icon: Clock },
+  { href: '/asistencia/administrativos', label: 'Puntualidad', icon: Clock },
   { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
 ]
 export default function Sidebar() {
