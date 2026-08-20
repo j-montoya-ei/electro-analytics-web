@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
+import LlegadasTardeTable from '@/components/LlegadasTardeTable'
 
 // Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
@@ -71,41 +72,6 @@ export default async function LlegadasTardePage({
         </p>
       </div>
 
-      {/* Tabla mínima de verificación · la UI final (encabezados agrupados
-          + selector de fechas) llega en el paso 2b */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600">
-            <tr>
-              <th className="text-left font-semibold px-4 py-3">Colaborador</th>
-              <th className="text-left font-semibold px-4 py-3">Proceso</th>
-              <th className="text-right font-semibold px-4 py-3">Días superó tolerancia</th>
-              <th className="text-right font-semibold px-4 py-3">Min. fuera de tolerancia</th>
-              <th className="text-right font-semibold px-4 py-3">Días entró tarde</th>
-              <th className="text-right font-semibold px-4 py-3">Min. desde su hora</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filas.map((f) => (
-              <tr key={f.trab_id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-900">{f.nombre_completo}</td>
-                <td className="px-4 py-3 text-gray-600">{f.area}</td>
-                <td className="px-4 py-3 text-right text-gray-900">{f.tardanzas_oficiales}</td>
-                <td className="px-4 py-3 text-right font-semibold text-gray-900">{f.minutos_oficiales}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{f.dias_despues_teorica}</td>
-                <td className="px-4 py-3 text-right text-gray-600">{f.minutos_teoricos}</td>
-              </tr>
-            ))}
-            {filas.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Sin llegadas tarde en el rango seleccionado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <LlegadasTardeTable data={filas} />
   )
 }
