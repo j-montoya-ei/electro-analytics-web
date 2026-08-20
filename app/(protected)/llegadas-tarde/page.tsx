@@ -72,6 +72,7 @@ export default async function LlegadasTardePage({
         </p>
       </div>
 
-    <LlegadasTardeTable data={filas} />
+      <LlegadasTardeTable data={filas} />
+    </div>
   )
 }
