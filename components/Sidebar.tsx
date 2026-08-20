@@ -16,12 +16,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/empleados', label: 'Empleados', icon: Users },
   { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck },
-  { href: '/asistencia/administrativos', label: 'Puntualidad', icon: Clock },
   { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
+  { href: '/llegadas-tarde', label: 'Llegadas tarde', icon: Clock },
 ]
 export default function Sidebar() {
   const pathname = usePathname()
