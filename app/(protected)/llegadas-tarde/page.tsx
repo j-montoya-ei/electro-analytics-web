@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import LlegadasTardeTable from '@/components/LlegadasTardeTable'
+import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
 
 // Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
