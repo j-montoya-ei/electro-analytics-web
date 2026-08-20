@@ -51,7 +51,7 @@ export default function LlegadasTardeFiltro({
   }
 
   function historico() {
-    const ini = '2026-08-01' // migración de turnos a Buk
+    const ini = '2026-07-01' // migración de turnos a Buk
     const fin = fmt(bogotaHoy())
     setD(ini); setH(fin)
     aplicar(ini, fin)
