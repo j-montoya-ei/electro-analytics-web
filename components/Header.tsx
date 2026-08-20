@@ -14,7 +14,7 @@ const routeTitles: Record<string, string> = {
   '/empleados': 'Empleados',
   '/asistencia': 'Asistencia',
   '/inasistencias': 'Inasistencias',
-  '/asistencia/administrativos': 'Puntualidad',
+  '/llegadas-tarde': 'Llegadas tarde',
 }
 
 export default function Header({ userEmail }: { userEmail: string | undefined }) {
