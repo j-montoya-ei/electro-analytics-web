@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import LlegadasTardeDrilldown from './LlegadasTardeDrilldown'
 
 type Fila = {
   trab_id: string
@@ -11,11 +12,12 @@ type Fila = {
   minutos_oficiales: number
   dias_despues_teorica: number
   minutos_teoricos: number
-  // ─── Tarde (regreso de almuerzo) ───
   tardanzas_tarde: number
   minutos_tarde_oficiales: number
   dias_despues_tarde: number
   minutos_tarde_teoricos: number
+  total_dias: number
+  total_minutos: number
 }
 
 type ColKey =
@@ -29,6 +31,8 @@ type ColKey =
   | 'minutos_tarde_oficiales'
   | 'dias_despues_tarde'
   | 'minutos_tarde_teoricos'
+  | 'total_dias'
+  | 'total_minutos'
 
 const TIPO: Record<ColKey, 'texto' | 'num'> = {
   nombre_completo: 'texto',
@@ -41,19 +45,30 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
   minutos_tarde_oficiales: 'num',
   dias_despues_tarde: 'num',
   minutos_tarde_teoricos: 'num',
+  total_dias: 'num',
+  total_minutos: 'num',
 }
 
-export default function LlegadasTardeTable({ data }: { data: Fila[] }) {
-  // Arranca por la métrica principal de mañana, mayor a menor (igual que la función SQL)
-  const [sortKey, setSortKey] = useState<ColKey>('minutos_oficiales')
+export default function LlegadasTardeTable({
+  data,
+  desde,
+  hasta,
+}: {
+  data: Fila[]
+  desde: string
+  hasta: string
+}) {
+  // Arranca por el total de minutos, mayor a menor (igual que la función SQL)
+  const [sortKey, setSortKey] = useState<ColKey>('total_minutos')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  // Colaborador seleccionado para el drill-down (null = modal cerrado)
+  const [seleccionado, setSeleccionado] = useState<Fila | null>(null)
 
   function ordenarPor(key: ColKey) {
     if (key === sortKey) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortKey(key)
-      // Primer clic: numéricas mayor→menor, texto A→Z
       setSortDir(TIPO[key] === 'num' ? 'desc' : 'asc')
     }
   }
@@ -88,13 +103,15 @@ export default function LlegadasTardeTable({ data }: { data: Fila[] }) {
         minutos desde su hora oficial (incluye lo consumido dentro de la gracia).{' '}
         Los bloques <span className="font-semibold">Mañana</span> miden la entrada;{' '}
         <span className="font-semibold">Tarde</span> mide el regreso de almuerzo
-        (solo turnos con almuerzo definido). Clic en cualquier encabezado para ordenar.
+        (solo turnos con almuerzo definido).{' '}
+        <span className="font-semibold text-gray-700">Clic en una fila</span> para ver
+        el detalle de días. Clic en un encabezado para ordenar.
       </p>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="text-gray-600">
-            {/* Encabezados de grupo */}
+            {/* Súper-grupos */}
             <tr className="border-b border-gray-200">
               <th rowSpan={3} onClick={() => ordenarPor('nombre_completo')} className={thTxt}>
                 Colaborador{flecha('nombre_completo')}
@@ -102,118 +119,117 @@ export default function LlegadasTardeTable({ data }: { data: Fila[] }) {
               <th rowSpan={3} onClick={() => ordenarPor('area')} className={thTxt}>
                 Proceso{flecha('area')}
               </th>
-              {/* Súper-grupo MAÑANA */}
               <th
                 colSpan={4}
                 className="px-4 py-1.5 text-center text-xs font-bold uppercase tracking-wide text-[#00369C] bg-blue-100 border-l-2 border-gray-300"
               >
                 Mañana · Entrada
               </th>
-              {/* Súper-grupo TARDE */}
               <th
                 colSpan={4}
                 className="px-4 py-1.5 text-center text-xs font-bold uppercase tracking-wide text-amber-700 bg-amber-100 border-l-2 border-gray-300"
               >
                 Tarde · Regreso almuerzo
               </th>
+              <th
+                colSpan={2}
+                rowSpan={2}
+                className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-800 bg-gray-200 border-l-2 border-gray-400"
+              >
+                Total superó tolerancia
+              </th>
             </tr>
             {/* Sub-grupos */}
             <tr className="border-b border-gray-200">
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-[#00369C] bg-blue-50 border-l-2 border-gray-300"
-              >
+              <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-[#00369C] bg-blue-50 border-l-2 border-gray-300">
                 Superó la tolerancia
               </th>
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-500 bg-gray-50 border-l border-gray-200"
-              >
+              <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-500 bg-gray-50 border-l border-gray-200">
                 Entró después de su hora
               </th>
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border-l-2 border-gray-300"
-              >
+              <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border-l-2 border-gray-300">
                 Superó la tolerancia
               </th>
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-500 bg-gray-50 border-l border-gray-200"
-              >
+              <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-500 bg-gray-50 border-l border-gray-200">
                 Entró después de su hora
               </th>
             </tr>
             {/* Columnas individuales */}
             <tr className="border-b border-gray-200 bg-gray-50">
-              {/* Mañana - tolerancia */}
               <th onClick={() => ordenarPor('tardanzas_oficiales')} className={thNum + ' border-l-2 border-gray-300'}>
                 Días{flecha('tardanzas_oficiales')}
               </th>
               <th onClick={() => ordenarPor('minutos_oficiales')} className={thNum}>
                 Minutos{flecha('minutos_oficiales')}
               </th>
-              {/* Mañana - después de hora */}
               <th onClick={() => ordenarPor('dias_despues_teorica')} className={thNum + ' border-l border-gray-200'}>
                 Días{flecha('dias_despues_teorica')}
               </th>
               <th onClick={() => ordenarPor('minutos_teoricos')} className={thNum}>
                 Minutos{flecha('minutos_teoricos')}
               </th>
-              {/* Tarde - tolerancia */}
               <th onClick={() => ordenarPor('tardanzas_tarde')} className={thNum + ' border-l-2 border-gray-300'}>
                 Días{flecha('tardanzas_tarde')}
               </th>
               <th onClick={() => ordenarPor('minutos_tarde_oficiales')} className={thNum}>
                 Minutos{flecha('minutos_tarde_oficiales')}
               </th>
-              {/* Tarde - después de hora */}
               <th onClick={() => ordenarPor('dias_despues_tarde')} className={thNum + ' border-l border-gray-200'}>
                 Días{flecha('dias_despues_tarde')}
               </th>
               <th onClick={() => ordenarPor('minutos_tarde_teoricos')} className={thNum}>
                 Minutos{flecha('minutos_tarde_teoricos')}
               </th>
+              {/* Totales */}
+              <th onClick={() => ordenarPor('total_dias')} className={thNum + ' border-l-2 border-gray-400 bg-gray-100'}>
+                Días{flecha('total_dias')}
+              </th>
+              <th onClick={() => ordenarPor('total_minutos')} className={thNum + ' bg-gray-100'}>
+                Minutos{flecha('total_minutos')}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filas.map((f) => (
-              <tr key={f.trab_id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-900">{f.nombre_completo}</td>
+              <tr
+                key={f.trab_id}
+                onClick={() => setSeleccionado(f)}
+                className="hover:bg-blue-50/50 cursor-pointer"
+              >
+                <td className="px-4 py-3 text-gray-900 font-medium">{f.nombre_completo}</td>
                 <td className="px-4 py-3 text-gray-600">{f.area}</td>
-                {/* Mañana - tolerancia */}
                 <td className="px-4 py-3 text-right text-gray-900 border-l-2 border-gray-200">
                   {f.tardanzas_oficiales}
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-gray-900">
                   {f.minutos_oficiales}
                 </td>
-                {/* Mañana - después de hora */}
                 <td className="px-4 py-3 text-right text-gray-600 border-l border-gray-100">
                   {f.dias_despues_teorica}
                 </td>
-                <td className="px-4 py-3 text-right text-gray-600">
-                  {f.minutos_teoricos}
-                </td>
-                {/* Tarde - tolerancia */}
+                <td className="px-4 py-3 text-right text-gray-600">{f.minutos_teoricos}</td>
                 <td className="px-4 py-3 text-right text-gray-900 border-l-2 border-gray-200">
                   {f.tardanzas_tarde}
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-amber-800">
                   {f.minutos_tarde_oficiales}
                 </td>
-                {/* Tarde - después de hora */}
                 <td className="px-4 py-3 text-right text-gray-600 border-l border-gray-100">
                   {f.dias_despues_tarde}
                 </td>
-                <td className="px-4 py-3 text-right text-gray-600">
-                  {f.minutos_tarde_teoricos}
+                <td className="px-4 py-3 text-right text-gray-600">{f.minutos_tarde_teoricos}</td>
+                {/* Totales */}
+                <td className="px-4 py-3 text-right font-semibold text-gray-900 border-l-2 border-gray-300 bg-gray-50">
+                  {f.total_dias}
+                </td>
+                <td className="px-4 py-3 text-right font-bold text-gray-900 bg-gray-50">
+                  {f.total_minutos}
                 </td>
               </tr>
             ))}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
                   Sin llegadas tarde en el rango seleccionado.
                 </td>
               </tr>
@@ -221,6 +237,18 @@ export default function LlegadasTardeTable({ data }: { data: Fila[] }) {
           </tbody>
         </table>
       </div>
+
+      {/* Modal drill-down */}
+      {seleccionado && (
+        <LlegadasTardeDrilldown
+          trabId={seleccionado.trab_id}
+          nombre={seleccionado.nombre_completo}
+          area={seleccionado.area}
+          desde={desde}
+          hasta={hasta}
+          onClose={() => setSeleccionado(null)}
+        />
+      )}
     </div>
   )
 }
