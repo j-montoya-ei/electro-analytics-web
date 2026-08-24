@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════════════════════
-// Página Llegadas tarde - Acumulado por colaborador (paso 2a)
+// Página Llegadas tarde - Acumulado por colaborador
 // Server Component: llama la función SQL por RPC y renderiza
 // Fuente única: fn_llegadas_tarde_por_colaborador(desde, hasta)
 // ═══════════════════════════════════════════════════════════
 import { createClient } from '@/lib/supabase/server'
 import LlegadasTardeTable from '@/components/LlegadasTardeTable'
 import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
+import LlegadasTardeKpis from '@/components/LlegadasTardeKpis'
 // Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
   const now = new Date()
@@ -26,6 +27,9 @@ type Fila = {
   minutos_tarde_oficiales: number
   dias_despues_tarde: number
   minutos_tarde_teoricos: number
+  // ─── Totales (superó tolerancia: mañana + tarde) ───
+  total_dias: number
+  total_minutos: number
 }
 export default async function LlegadasTardePage({
   searchParams,
@@ -67,7 +71,8 @@ export default async function LlegadasTardePage({
         </p>
       </div>
       <LlegadasTardeFiltro desde={desde} hasta={hasta} />
-      <LlegadasTardeTable data={filas} />
+      <LlegadasTardeKpis data={filas} />
+      <LlegadasTardeTable data={filas} desde={desde} hasta={hasta} />
     </div>
   )
 }
