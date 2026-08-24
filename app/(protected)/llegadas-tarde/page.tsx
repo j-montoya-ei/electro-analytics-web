@@ -3,18 +3,15 @@
 // Server Component: llama la función SQL por RPC y renderiza
 // Fuente única: fn_llegadas_tarde_por_colaborador(desde, hasta)
 // ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import LlegadasTardeTable from '@/components/LlegadasTardeTable'
 import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
-
 // Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
   const now = new Date()
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
 }
 const pad = (n: number) => String(n).padStart(2, '0')
-
 type Fila = {
   trab_id: string
   nombre_completo: string
@@ -24,31 +21,30 @@ type Fila = {
   minutos_oficiales: number
   dias_despues_teorica: number
   minutos_teoricos: number
+  // ─── Tarde (regreso de almuerzo) ───
+  tardanzas_tarde: number
+  minutos_tarde_oficiales: number
+  dias_despues_tarde: number
+  minutos_tarde_teoricos: number
 }
-
 export default async function LlegadasTardePage({
   searchParams,
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>
 }) {
   const { desde: qDesde, hasta: qHasta } = await searchParams
-
   // Rango por defecto: mes en curso (Colombia)
   const d = bogotaNow()
   const year = d.getFullYear()
   const month = d.getMonth() + 1
   const ultimoDia = new Date(year, month, 0).getDate()
-
   const desde = qDesde ?? `${year}-${pad(month)}-01`
   const hasta = qHasta ?? `${year}-${pad(month)}-${pad(ultimoDia)}`
-
   const supabase = await createClient()
-
   const { data, error } = await supabase.rpc(
     'fn_llegadas_tarde_por_colaborador',
     { desde, hasta }
   )
-
   if (error) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -61,9 +57,7 @@ export default async function LlegadasTardePage({
       </div>
     )
   }
-
   const filas = (data ?? []) as Fila[]
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
@@ -72,9 +66,7 @@ export default async function LlegadasTardePage({
           {filas.length} colaboradores · {desde} a {hasta} · Electroingeniería S.A.S.
         </p>
       </div>
-
       <LlegadasTardeFiltro desde={desde} hasta={hasta} />
-
       <LlegadasTardeTable data={filas} />
     </div>
   )
