@@ -14,6 +14,10 @@ import { Users, Cake, History, Network, MapPin } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+// Inicio de datos confiables del proyecto. El bloque operativo (llegadas
+// tarde) se filtra desde aquí para no arrastrar abril–junio (no confiables).
+const CORTE_CONFIABLE = '2026-07-01'
+
 type Fila = {
   documento: string
   nombre_completo: string
@@ -64,7 +68,6 @@ function contarPor(rows: Fila[], key: keyof Fila, orden?: string[]): Conteo[] {
   return arr
 }
 
-// Panel y barra simple (server) para el bloque operativo de llegadas tarde.
 function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -104,8 +107,8 @@ function BarrasSimple({ datos }: { datos: Conteo[] }) {
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Caracterización + bloque operativo (llegadas tarde administrativas),
-  // mismas consultas que usaban las dos páginas por separado.
+  // Caracterización + bloque operativo (llegadas tarde administrativas).
+  // El operativo se acota desde CORTE_CONFIABLE (mañana = momento 'entrada').
   const [carac, late] = await Promise.all([
     supabase.from('vw_caracterizacion').select('*').limit(1000),
     supabase
@@ -113,6 +116,7 @@ export default async function HomePage() {
       .select('nombre_completo')
       .eq('momento', 'entrada')
       .eq('llego_tarde', true)
+      .gte('fecha_entrada', CORTE_CONFIABLE)
       .limit(1000),
   ])
 
@@ -213,7 +217,12 @@ export default async function HomePage() {
 
       {/* Bloque operativo rescatado del antiguo Dashboard */}
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Operación</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Operación</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Llegadas tarde de la mañana · administrativos · desde {CORTE_CONFIABLE}
+          </p>
+        </div>
         <Panel titulo="Top llegadas tarde · administrativos">
           {topTarde.length ? (
             <BarrasSimple datos={topTarde} />
