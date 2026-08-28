@@ -1,14 +1,15 @@
 // ═══════════════════════════════════════════════════════════
-// Página Caracterización del personal (#8)
-// Server Component: jala vw_caracterizacion (planta activa) y
-// arma KPIs + distribuciones. El conteo/agrupación es presentación;
-// las reglas (buckets, etiquetas, universo) viven en la vista SQL.
-// Ubicación: app/(protected)/caracterizacion/page.tsx
+// Página Caracterización del personal (#8) — HOME (/)
+// Server Component: jala vw_caracterizacion (planta activa), cuenta,
+// y pasa las distribuciones al componente cliente de gráficos.
+// Las reglas (buckets, etiquetas, universo) viven en la vista SQL;
+// aquí solo se cuenta y se dibuja.
+// Ubicación: app/(protected)/page.tsx
 // ═══════════════════════════════════════════════════════════
 
-import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import KpiCard from '@/components/KpiCard'
+import CaracterizacionGraficos from '@/components/CaracterizacionGraficos'
 import { Users, Cake, History } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -66,46 +67,6 @@ function contarPor(rows: Fila[], key: keyof Fila, orden?: string[]): Conteo[] {
   return arr
 }
 
-function Barras({ datos, total }: { datos: Conteo[]; total: number }) {
-  const max = Math.max(1, ...datos.map((d) => d.value))
-  return (
-    <div className="space-y-2">
-      {datos.map((d) => {
-        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0
-        return (
-          <div key={d.label} className="flex items-center gap-3">
-            <span
-              className="w-36 shrink-0 text-sm text-gray-700 truncate"
-              title={d.label}
-            >
-              {d.label}
-            </span>
-            <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-full bg-[#00369C] rounded-full"
-                style={{ width: `${(d.value / max) * 100}%` }}
-              />
-            </div>
-            <span className="w-16 shrink-0 text-right text-sm font-medium text-gray-900">
-              {d.value}{' '}
-              <span className="text-gray-400 font-normal">· {pct}%</span>
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-900 mb-4">{titulo}</h3>
-      {children}
-    </div>
-  )
-}
-
 export default async function CaracterizacionPage() {
   const supabase = await createClient()
 
@@ -148,7 +109,7 @@ export default async function CaracterizacionPage() {
     ? antigs.reduce((a, b) => a + b, 0) / antigs.length
     : 0
 
-  // ─── Distribuciones ─────────────────────────────────────────────────
+  // ─── Distribuciones (se cuentan aquí, se dibujan en el cliente) ─────
   const porGenero = contarPor(filas, 'genero')
   const porEdad = contarPor(filas, 'rango_edad', ORDEN_EDAD)
   const porAntig = contarPor(filas, 'rango_antiguedad', ORDEN_ANTIG)
@@ -207,53 +168,22 @@ export default async function CaracterizacionPage() {
         />
       </div>
 
-      {/* Distribuciones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Panel titulo="Género">
-          <Barras datos={porGenero} total={total} />
-        </Panel>
-        <Panel titulo="Rango de edad">
-          <Barras datos={porEdad} total={total} />
-        </Panel>
-      </div>
+      {/* Gráficos (cliente) */}
+      <CaracterizacionGraficos
+        total={total}
+        genero={porGenero}
+        edad={porEdad}
+        antiguedad={porAntig}
+        estrato={porEstrato}
+        contrato={porContrato}
+        escolaridad={porEscolaridad}
+        unidad={porUnidad}
+        proceso={porProceso}
+        sede={porSede}
+        sinEscolaridad={sinEscolaridad}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Panel titulo="Antigüedad">
-          <Barras datos={porAntig} total={total} />
-        </Panel>
-        <Panel titulo="Estrato socioeconómico">
-          <Barras datos={porEstrato} total={total} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Panel titulo="Nivel educativo">
-          <Barras datos={porEscolaridad} total={total} />
-          <p className="mt-3 text-xs text-gray-400">
-            Dato manual en Buk: {sinEscolaridad} de {total} sin diligenciar.
-          </p>
-        </Panel>
-        <Panel titulo="Tipo de contrato">
-          <Barras datos={porContrato} total={total} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Panel titulo={`Unidad de negocio (${porUnidad.length})`}>
-          <Barras datos={porUnidad} total={total} />
-        </Panel>
-        <Panel titulo={`Proceso (${porProceso.length})`}>
-          <Barras datos={porProceso} total={total} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        <Panel titulo={`Sede (${porSede.length})`}>
-          <Barras datos={porSede} total={total} />
-        </Panel>
-      </div>
-
-      {/* El cruce interactivo se monta aquí (archivo 2 de 3) */}
+      {/* El cruce interactivo se monta aquí (archivo pendiente) */}
     </div>
   )
 }
