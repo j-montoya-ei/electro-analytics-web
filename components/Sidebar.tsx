@@ -18,13 +18,14 @@ import { useState } from 'react'
      ChevronRight,
    } from 'lucide-react'
 
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/empleados', label: 'Empleados', icon: Users },
-  { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck },
-  { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
-  { href: '/llegadas-tarde', label: 'Llegadas tarde', icon: Clock },
-]
+   const navItems = [
+     { href: '/', label: 'Caracterización', icon: PieChart },
+     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+     { href: '/empleados', label: 'Empleados', icon: Users },
+     { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck },
+     { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
+     { href: '/llegadas-tarde', label: 'Llegadas tarde', icon: Clock },
+   ]
 export default function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
