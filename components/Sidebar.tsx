@@ -7,15 +7,16 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import {
-  LayoutDashboard,
-  Users,
-  CalendarCheck,
-  UserX,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
+   import {
+     LayoutDashboard,
+     PieChart,
+     Users,
+     CalendarCheck,
+     UserX,
+     Clock,
+     ChevronLeft,
+     ChevronRight,
+   } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
