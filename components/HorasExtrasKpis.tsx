@@ -1,7 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
-import type { FilaHorasExtras } from '@/app/(protected)/horas-extras/page'
+
+// Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
+type FilaHorasExtras = {
+  dni: string
+  nombre_completo: string | null
+  proceso: string
+  unidad_negocio: string
+  horas_extra_reales: number
+  meses_supera_48h: number
+}
 
 function fmtHoras(h: number): string {
   // 1 decimal, sin decimal si es entero
