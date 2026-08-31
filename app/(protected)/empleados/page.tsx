@@ -1,10 +1,11 @@
 // ═══════════════════════════════════════════════════════════
 // Página Empleados - Listado con data real de Supabase
-// Server Component: hace el fetch y lo pasa a la tabla cliente
+// Server Component: hace el fetch y lo pasa a la DataTable unificada.
+// Ubicación: app/(protected)/empleados/page.tsx
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
-import EmpleadosTable from '@/components/EmpleadosTable'
+import DataTable from '@/components/DataTable'
 
 export default async function EmpleadosPage() {
   const supabase = await createClient()
@@ -36,7 +37,18 @@ export default async function EmpleadosPage() {
         </p>
       </div>
 
-      <EmpleadosTable data={empleados ?? []} />
+      <DataTable
+        data={empleados ?? []}
+        searchPlaceholder="Buscar por nombre, cargo, área..."
+        emptyMessage={
+          <>
+            No hay empleados para mostrar. Verifica que la tabla{' '}
+            <code className="bg-gray-100 px-1 rounded">empleados</code> tenga
+            datos y que las políticas RLS permitan la lectura al usuario
+            autenticado.
+          </>
+        }
+      />
     </div>
   )
 }
