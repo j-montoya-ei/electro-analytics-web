@@ -1,6 +1,8 @@
 // ═══════════════════════════════════════════════════════════
-// Página Inasistencias - KPIs + tabla enriquecida con empleados
-// Join inasistencias.dni -> empleados.documento (normalizado)
+// Página Inasistencias - KPIs + tabla enriquecida desde vw_inasistencias
+// La lógica de cruce (cargo + turno dominante) vive en la vista SQL.
+// El frontend solo lee y presenta.
+// Ubicación: app/(protected)/inasistencias/page.tsx
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
@@ -13,7 +15,6 @@ function bogotaNow() {
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
 }
 const pad = (n: number) => String(n).padStart(2, '0')
-const onlyDigits = (s: unknown) => String(s ?? '').replace(/\D/g, '')
 const kpi = (r: { count: number | null; error: unknown }) =>
   r.error ? '—' : (r.count ?? 0)
 
@@ -26,39 +27,34 @@ export default async function InasistenciasPage() {
 
   const table = 'inasistencias'
 
-  const [totalMes, codL, codP, dniRows, filas, empleados] = await Promise.all([
+  const [totalMes, codL, codP, dniRows, filas] = await Promise.all([
+    // KPIs y "empleados afectados" se calculan sobre la tabla cruda (sin cambios)
     supabase.from(table).select('*', { count: 'exact', head: true }).eq('ano', year).eq('mes', month),
     supabase.from(table).select('*', { count: 'exact', head: true }).eq('ano', year).eq('mes', month).eq('motivo', 'L'),
     supabase.from(table).select('*', { count: 'exact', head: true }).eq('ano', year).eq('mes', month).eq('motivo', 'P'),
     supabase.from(table).select('dni').eq('ano', year).eq('mes', month),
+    // La tabla se alimenta de la vista, que ya trae nombre, cargo, area y turno
     supabase
-      .from(table)
-      .select('dni, ano, mes, dia, motivo')
+      .from('vw_inasistencias')
+      .select('dni, ano, mes, dia, motivo, nombre_completo, cargo, area, turno')
+      .eq('ano', year)
+      .eq('mes', month)
       .order('ano', { ascending: false })
       .order('mes', { ascending: false })
       .order('dia', { ascending: false })
       .limit(2000),
-    supabase.from('empleados').select('*'),
   ])
 
-  // Mapa: documento normalizado (solo dígitos) -> registro del empleado
-  const mapaEmpleados = new Map<string, Record<string, unknown>>()
-  for (const e of empleados.data ?? []) {
-    mapaEmpleados.set(onlyDigits((e as Record<string, unknown>).documento), e)
-  }
-
-  // Filas enriquecidas
-  const rows = (filas.data ?? []).map((r) => {
-    const emp = mapaEmpleados.get(onlyDigits(r.dni)) ?? {}
-    return {
-      nombre_completo: (emp.nombre_completo as string) ?? '—',
-      area: (emp.area as string) ?? '—',
-      especialidad: (emp.especialidad as string) ?? '—',
-      turno: (emp.turno as string) ?? '—',
-      fecha: `${r.ano}-${pad(r.mes)}-${pad(r.dia)}`,
-      motivo: r.motivo ?? '—',
-    }
-  })
+  // Filas ya enriquecidas por la vista. Se mantienen las mismas llaves para
+  // no alterar los encabezados de la tabla: especialidad = cargo.
+  const rows = (filas.data ?? []).map((r) => ({
+    nombre_completo: (r.nombre_completo as string) ?? '—',
+    area: (r.area as string) ?? '—',
+    especialidad: (r.cargo as string) ?? '—',
+    turno: (r.turno as string) ?? '—',
+    fecha: `${r.ano}-${pad(r.mes)}-${pad(r.dia)}`,
+    motivo: r.motivo ?? '—',
+  }))
 
   const empleadosAfectados = dniRows.data
     ? new Set(dniRows.data.map((r) => r.dni)).size
