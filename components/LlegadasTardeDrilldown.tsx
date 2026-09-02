@@ -22,6 +22,18 @@ function fmtMin(min: number): string {
 // '13:30:00' → '13:30'
 const hhmm = (t: string) => (t ? t.slice(0, 5) : '—')
 
+function minutosDesdeMedianoche(t: string): number {
+  const [horas, minutos] = t.slice(0, 5).split(':').map(Number)
+  return horas * 60 + minutos
+}
+
+function hhmmDesdeMinutos(total: number): string {
+  const minutosDelDia = ((total % 1440) + 1440) % 1440
+  return `${String(Math.floor(minutosDelDia / 60)).padStart(2, '0')}:${String(
+    minutosDelDia % 60
+  ).padStart(2, '0')}`
+}
+
 export default function LlegadasTardeDrilldown({
   trabId,
   nombre,
@@ -165,6 +177,19 @@ export default function LlegadasTardeDrilldown({
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {dias.map((d, i) => (
+                  (() => {
+                    const tienePermiso =
+                      minutosDesdeMedianoche(d.limite_gracia) >
+                      minutosDesdeMedianoche(d.hora_teorica) + 7
+                    const finPermiso = tienePermiso
+                      ? hhmmDesdeMinutos(minutosDesdeMedianoche(d.limite_gracia) - 7)
+                      : null
+                    const minutosDespuesPermiso = finPermiso
+                      ? minutosDesdeMedianoche(d.hora_real) -
+                        minutosDesdeMedianoche(finPermiso)
+                      : null
+
+                    return (
                   <tr key={`${d.fecha}-${d.momento}-${i}`} className="hover:bg-gray-50">
                     <td className="py-2 pr-4 text-gray-900">{d.fecha}</td>
                     <td className="py-2 pr-4">
@@ -179,14 +204,28 @@ export default function LlegadasTardeDrilldown({
                         {d.momento}
                       </span>
                     </td>
-                    <td className="py-2 pr-4 text-gray-600">{hhmm(d.hora_teorica)}</td>
+                    <td className="py-2 pr-4 text-gray-600">
+                      <div>{hhmm(d.hora_teorica)}</div>
+                      {finPermiso && (
+                        <div className="mt-1 text-xs font-medium text-emerald-700">
+                          Permiso hasta {finPermiso}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 pr-4 text-gray-900 font-medium">
                       {hhmm(d.hora_real)}
                     </td>
                     <td className="py-2 text-right font-semibold text-gray-900">
-                      {d.minutos} min
+                      <div>{d.minutos} min</div>
+                      {finPermiso && (
+                        <div className="mt-1 text-xs font-normal text-gray-500">
+                          {minutosDespuesPermiso} min después del permiso
+                        </div>
+                      )}
                     </td>
                   </tr>
+                    )
+                  })()
                 ))}
               </tbody>
             </table>

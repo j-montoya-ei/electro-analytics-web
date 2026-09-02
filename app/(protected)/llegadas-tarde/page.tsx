@@ -61,7 +61,7 @@ export default async function LlegadasTardePage({
       </div>
     )
   }
-  const filas = (data ?? []) as Fila[]
+  const filas = ((data ?? []) as Fila[]).filter((fila) => fila.total_minutos > 0)
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
