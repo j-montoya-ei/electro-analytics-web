@@ -8,10 +8,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
-  LayoutDashboard,
   PieChart,
   Users,
-  CalendarCheck,
   UserX,
   Clock,
   Timer,
@@ -32,12 +30,12 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   return (
     <aside
-      className={`bg-white border-r border-gray-200 h-screen sticky top-0 transition-all duration-300 ${
+      className={`sticky top-0 h-screen border-r border-gray-200/80 bg-white/95 transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       } hidden md:flex md:flex-col`}
     >
       {/* Logo header */}
-      <div className="h-16 border-b border-gray-200 flex items-center justify-center px-4">
+      <div className="flex h-16 items-center justify-center border-b border-gray-200/80 px-4">
         {collapsed ? (
           <Image
             src="/logos/electroingenieria-isotipo.png"
@@ -57,7 +55,12 @@ export default function Sidebar() {
         )}
       </div>
       {/* Navegación */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-5">
+        {!collapsed && (
+          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
+            Módulos
+          </p>
+        )}
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
@@ -67,12 +70,12 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-[#00369C] text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-blue-50 font-semibold text-[#00369C] shadow-sm ring-1 ring-blue-100'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               } ${collapsed ? 'justify-center' : ''}`}
               title={collapsed ? item.label : undefined}
             >
-              <Icon className="w-5 h-5 shrink-0" />
+              <Icon className="h-[18px] w-[18px] shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           )
@@ -81,7 +84,7 @@ export default function Sidebar() {
       {/* Botón colapsar */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="border-t border-gray-200 h-12 flex items-center justify-center hover:bg-gray-50 text-gray-500 transition-colors"
+        className="flex h-12 items-center justify-center border-t border-gray-200/80 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700"
         title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
       >
         {collapsed ? (

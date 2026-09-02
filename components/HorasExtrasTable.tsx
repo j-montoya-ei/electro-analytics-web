@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 // Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type Fila = {
@@ -42,6 +42,7 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
 
 // Formatea horas: 1 decimal, "—" si es 0 (para no saturar la tabla de ceros)
 const fmtH = (h: number) => (h > 0 ? (Math.round(h * 10) / 10).toString() : '—')
+const PAGE_SIZE = 20
 
 export default function HorasExtrasTable({
   data,
@@ -53,6 +54,7 @@ export default function HorasExtrasTable({
   // Arranca por total de horas extra reales, mayor a menor (igual que la función SQL)
   const [sortKey, setSortKey] = useState<ColKey>('horas_extra_reales')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [pagina, setPagina] = useState(1)
 
   function ordenarPor(key: ColKey) {
     if (key === sortKey) {
@@ -75,34 +77,46 @@ export default function HorasExtrasTable({
     return copia
   }, [data, sortKey, sortDir])
 
+  const totalPaginas = Math.max(1, Math.ceil(filas.length / PAGE_SIZE))
+  const filasVisibles = filas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+
+  useEffect(() => {
+    setPagina(1)
+  }, [data, sortKey, sortDir])
+
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas)
+  }, [pagina, totalPaginas])
+
   const flecha = (key: ColKey) =>
     key === sortKey ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
 
   const thNum =
-    'px-4 py-3 text-right font-semibold cursor-pointer select-none hover:text-[#00369C] bg-gray-50'
+    'px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-[#00369C] transition-colors'
   const thTxt =
-    'px-4 py-3 text-left font-semibold cursor-pointer select-none hover:text-[#00369C] bg-gray-50'
+    'px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-[#00369C] transition-colors'
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-gray-500 leading-relaxed">
+    <div className="space-y-3">
+      <div className="rounded-lg border border-gray-200/80 bg-white p-3.5 text-xs leading-relaxed text-gray-500 shadow-sm">
         <span className="font-semibold text-[#00369C]">Total HE</span>: horas extra
         reales del rango (diurna + nocturna + dominical/festiva), sin incluir recargos.
         Es la base del límite legal.{' '}
         <span className="font-semibold text-gray-700">Meses &gt;48h</span>: en cuántos
         meses del rango el colaborador superó el tope mensual de horas extra.{' '}
         Clic en un encabezado para ordenar.
-      </p>
+      </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-gray-600">
+      <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+        <table className="min-w-[900px] w-full text-sm">
+          <thead className="sticky top-0 z-10 text-gray-700">
             {/* Súper-grupos */}
-            <tr className="border-b border-gray-200">
-              <th rowSpan={2} onClick={() => ordenarPor('nombre_completo')} className={thTxt + ' align-bottom'}>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th rowSpan={2} onClick={() => ordenarPor('nombre_completo')} className={thTxt + ' sticky left-0 z-20 bg-gray-50 align-bottom'}>
                 Colaborador{flecha('nombre_completo')}
               </th>
-              <th rowSpan={2} onClick={() => ordenarPor('proceso')} className={thTxt + ' align-bottom'}>
+              <th rowSpan={2} onClick={() => ordenarPor('proceso')} className={thTxt + ' sticky left-[190px] z-20 bg-gray-50 align-bottom'}>
                 Proceso{flecha('proceso')}
               </th>
               <th rowSpan={2} onClick={() => ordenarPor('unidad_negocio')} className={thTxt + ' align-bottom'}>
@@ -123,7 +137,7 @@ export default function HorasExtrasTable({
               </th>
             </tr>
             {/* Columnas individuales del grupo Horas extra */}
-            <tr className="border-b border-gray-200 bg-gray-50">
+            <tr className="border-b border-gray-200 bg-white">
               <th onClick={() => ordenarPor('he_diurna_ord')} className={thNum + ' border-l-2 border-gray-300'}>
                 Diurna{flecha('he_diurna_ord')}
               </th>
@@ -139,22 +153,22 @@ export default function HorasExtrasTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filas.map((f) => (
-              <tr key={f.dni} className="hover:bg-blue-50/50">
-                <td className="px-4 py-3 text-gray-900 font-medium">
+            {filasVisibles.map((f) => (
+              <tr key={f.dni} className="group border-b border-gray-100 transition-colors odd:bg-white even:bg-slate-50/35 hover:bg-blue-50/50">
+                <td className="sticky left-0 z-[1] bg-inherit px-4 py-3 font-semibold text-gray-900 group-hover:bg-blue-50/50">
                   {f.nombre_completo ?? 'Sin dato'}
                 </td>
-                <td className="px-4 py-3 text-gray-600">{f.proceso}</td>
+                <td className="sticky left-[190px] z-[1] bg-inherit px-4 py-3 text-gray-600 group-hover:bg-blue-50/50">{f.proceso}</td>
                 <td className="px-4 py-3 text-gray-600">{f.unidad_negocio}</td>
-                <td className="px-4 py-3 text-right text-gray-900 border-l-2 border-gray-200">
+                <td className="border-l border-gray-100 px-3 py-3 text-right text-gray-900">
                   {fmtH(f.he_diurna_ord)}
                 </td>
-                <td className="px-4 py-3 text-right text-gray-900">{fmtH(f.he_nocturna)}</td>
-                <td className="px-4 py-3 text-right text-gray-900">{fmtH(f.he_diurna_domfes)}</td>
-                <td className="px-4 py-3 text-right font-bold text-gray-900 border-l border-gray-200 bg-gray-50">
+                <td className="px-3 py-3 text-right text-gray-900">{fmtH(f.he_nocturna)}</td>
+                <td className="px-3 py-3 text-right text-gray-900">{fmtH(f.he_diurna_domfes)}</td>
+                <td className="border-l border-gray-200 bg-blue-50/20 px-3 py-3 text-right font-bold text-[#00369C]">
                   {fmtH(f.horas_extra_reales)}
                 </td>
-                <td className="px-4 py-3 text-right border-l-2 border-gray-300">
+                <td className="border-l border-gray-200 px-3 py-3 text-right">
                   {f.meses_supera_48h > 0 ? (
                     <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
                       {f.meses_supera_48h}
@@ -167,13 +181,28 @@ export default function HorasExtrasTable({
             ))}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
                   Sin horas extra en el rango seleccionado.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
+        {filas.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-gray-500">
+              Mostrando {((pagina - 1) * PAGE_SIZE) + 1}–{Math.min(pagina * PAGE_SIZE, filas.length)} de {filas.length} colaboradores
+            </p>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1} className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40">Anterior</button>
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((numero) => (
+                <button key={numero} type="button" onClick={() => setPagina(numero)} aria-current={pagina === numero ? 'page' : undefined} className={`min-w-8 rounded-md px-2 py-1.5 text-xs font-semibold transition ${pagina === numero ? 'bg-[#00369C] text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-[#00369C] hover:text-[#00369C]'}`}>{numero}</button>
+              ))}
+              <button type="button" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40">Siguiente</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -18,14 +18,14 @@ export default async function ProtectedLayout({
   } = await supabase.auth.getUser()
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-transparent">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Área principal: Header + contenido */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header userEmail={user?.email} />
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+        <main className="flex-1 overflow-x-auto p-4 md:p-8">
           {children}
         </main>
       </div>

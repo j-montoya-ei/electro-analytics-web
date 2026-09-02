@@ -6,7 +6,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { LogOut, User } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { logout } from '@/app/logout/actions'
 
 const routeTitles: Record<string, string> = {
@@ -15,6 +15,7 @@ const routeTitles: Record<string, string> = {
   '/asistencia': 'Asistencia',
   '/inasistencias': 'Inasistencias',
   '/llegadas-tarde': 'Llegadas tarde',
+  '/horas-extras': 'Horas extras',
 }
 
 export default function Header({ userEmail }: { userEmail: string | undefined }) {
@@ -33,22 +34,23 @@ export default function Header({ userEmail }: { userEmail: string | undefined })
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 sticky top-0 z-30 flex items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200/80 bg-white/95 px-4 shadow-[0_1px_3px_rgba(16,24,40,0.04)] backdrop-blur md:px-8">
       {/* Izquierda: título del módulo */}
       <div className="flex items-center gap-3">
-        <h1 className="text-lg md:text-xl font-semibold text-gray-900">
+        <span className="hidden h-7 w-1 rounded-full bg-[#F6D000] md:block" aria-hidden="true" />
+        <h1 className="text-lg font-bold tracking-tight text-gray-900 md:text-xl">
           {title}
         </h1>
-        <span className="hidden md:inline text-sm text-gray-400">
+        <span className="hidden text-sm text-gray-400 md:inline">
           · Gestión Humana Analytics
         </span>
       </div>
 
       {/* Derecha: usuario + logout */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 md:gap-3">
         {/* Avatar + email */}
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-[#00369C] text-white flex items-center justify-center text-sm font-semibold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00369C] text-sm font-semibold text-white ring-4 ring-blue-50">
             {getInitials(userEmail)}
           </div>
           <div className="hidden sm:block">
@@ -62,13 +64,13 @@ export default function Header({ userEmail }: { userEmail: string | undefined })
         </div>
 
         {/* Separador */}
-        <div className="w-px h-8 bg-gray-200 hidden sm:block" />
+        <div className="hidden h-8 w-px bg-gray-200 sm:block" />
 
         {/* Botón logout */}
         <form action={logout}>
           <button
             type="submit"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600"
             title="Cerrar sesión"
           >
             <LogOut className="w-4 h-4" />
