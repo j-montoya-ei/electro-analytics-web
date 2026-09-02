@@ -35,6 +35,9 @@ export default async function EmpleadosPage() {
         <p className="text-sm text-gray-600 mt-1">
           {empleados?.length ?? 0} registros · Electroingeniería S.A.S.
         </p>
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Consulta y busca la información individual de los colaboradores activos.
+        </p>
       </div>
 
       <DataTable

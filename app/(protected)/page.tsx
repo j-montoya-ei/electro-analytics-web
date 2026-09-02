@@ -114,6 +114,9 @@ export default async function HomePage() {
 
   const sinEscolaridad =
     porEscolaridad.find((d) => d.label === SIN_DATO)?.value ?? 0
+  const rangoEdadPrincipal = porEdad[0]
+  const contratoPrincipal = porContrato[0]
+  const sedePrincipal = porSede[0]
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -124,7 +127,29 @@ export default async function HomePage() {
         <p className="text-sm text-gray-600 mt-1">
           {total} colaboradores activos · Electroingeniería S.A.S.
         </p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+          Consulta el perfil demográfico, contractual y organizacional de la planta activa.
+          Los gráficos muestran la distribución de cada dimensión para facilitar la lectura y la toma de decisiones.
+        </p>
       </div>
+
+      <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-[#092d6b]">Resumen ejecutivo</h3>
+        <div className="mt-3 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <p>
+            <span className="font-semibold text-slate-900">Perfil de edad:</span>{' '}
+            {rangoEdadPrincipal ? `${rangoEdadPrincipal.label} concentra ${rangoEdadPrincipal.value} colaboradores.` : 'Sin datos disponibles.'}
+          </p>
+          <p>
+            <span className="font-semibold text-slate-900">Contratación:</span>{' '}
+            {contratoPrincipal ? `${contratoPrincipal.label} es la modalidad más frecuente (${pctG(contratoPrincipal.value)}%).` : 'Sin datos disponibles.'}
+          </p>
+          <p>
+            <span className="font-semibold text-slate-900">Mayor concentración:</span>{' '}
+            {sedePrincipal ? `${sedePrincipal.value} colaboradores están en ${sedePrincipal.label}.` : 'Sin datos disponibles.'}
+          </p>
+        </div>
+      </section>
 
       {/* KPIs: planta + operativos (procesos, sedes) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

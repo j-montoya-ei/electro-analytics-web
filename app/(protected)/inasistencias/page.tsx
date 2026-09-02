@@ -67,6 +67,9 @@ export default async function InasistenciasPage() {
         <p className="text-sm text-gray-600 mt-1">
           Novedades del mes en curso · Electroingeniería S.A.S.
         </p>
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Revisa las ausencias registradas y los colaboradores afectados durante el mes seleccionado.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

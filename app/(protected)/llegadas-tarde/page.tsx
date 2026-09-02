@@ -69,6 +69,9 @@ export default async function LlegadasTardePage({
         <p className="text-sm text-gray-600 mt-1">
           {filas.length} colaboradores · {desde} a {hasta} · Electroingeniería S.A.S.
         </p>
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Identifica tardanzas al iniciar la jornada y al regresar del almuerzo. Los permisos aprobados se consideran hasta su hora de finalización.
+        </p>
       </div>
       <LlegadasTardeFiltro desde={desde} hasta={hasta} />
       <LlegadasTardeKpis data={filas} />

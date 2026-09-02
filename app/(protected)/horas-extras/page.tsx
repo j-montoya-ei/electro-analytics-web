@@ -76,6 +76,9 @@ export default async function HorasExtrasPage({
         <p className="text-sm text-gray-600 mt-1">
           {filas.length} colaboradores · {desde} a {hasta} · Electroingeniería S.A.S.
         </p>
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Analiza las horas extras y recargos acumulados por colaborador en el período seleccionado.
+        </p>
       </div>
 
       <HorasExtrasFiltro desde={desde} hasta={hasta} />
