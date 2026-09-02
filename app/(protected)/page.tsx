@@ -1,22 +1,15 @@
 // ═══════════════════════════════════════════════════════════
-// Página HOME (/) — Caracterización del personal + Operación
-// Fusiona: caracterización (vw_caracterizacion) + el bloque operativo
-// que aportaba el antiguo Dashboard (top llegadas tarde administrativas).
+// Página HOME (/) — Caracterización del personal
 // Server Component: hace los fetch, cuenta, y pasa lo dibujable al cliente.
 // Ubicación: app/(protected)/page.tsx
 // ═══════════════════════════════════════════════════════════
 
-import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import KpiCard from '@/components/KpiCard'
 import CaracterizacionGraficos from '@/components/CaracterizacionGraficos'
 import { Users, Cake, History, Network, MapPin } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
-
-// Inicio de datos confiables del proyecto. El bloque operativo (llegadas
-// tarde) se filtra desde aquí para no arrastrar abril–junio (no confiables).
-const CORTE_CONFIABLE = '2026-07-01'
 
 type Fila = {
   documento: string
@@ -68,57 +61,10 @@ function contarPor(rows: Fila[], key: keyof Fila, orden?: string[]): Conteo[] {
   return arr
 }
 
-function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-900 mb-4">{titulo}</h3>
-      {children}
-    </div>
-  )
-}
-
-function BarrasSimple({ datos }: { datos: Conteo[] }) {
-  const max = Math.max(1, ...datos.map((d) => d.value))
-  return (
-    <div className="space-y-2">
-      {datos.map((d) => (
-        <div key={d.label} className="flex items-center gap-3">
-          <span
-            className="w-44 shrink-0 text-sm text-gray-700 truncate"
-            title={d.label}
-          >
-            {d.label}
-          </span>
-          <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="h-full bg-[#00369C] rounded-full"
-              style={{ width: `${(d.value / max) * 100}%` }}
-            />
-          </div>
-          <span className="w-8 shrink-0 text-right text-sm font-medium text-gray-900">
-            {d.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Caracterización + bloque operativo (llegadas tarde administrativas).
-  // El operativo se acota desde CORTE_CONFIABLE (mañana = momento 'entrada').
-  const [carac, late] = await Promise.all([
-    supabase.from('vw_caracterizacion').select('*').limit(1000),
-    supabase
-      .from('vw_puntualidad_admin')
-      .select('nombre_completo')
-      .eq('momento', 'entrada')
-      .eq('llego_tarde', true)
-      .gte('fecha_entrada', CORTE_CONFIABLE)
-      .limit(1000),
-  ])
+  const carac = await supabase.from('vw_caracterizacion').select('*').limit(1000)
 
   if (carac.error) {
     return (
@@ -168,16 +114,6 @@ export default async function HomePage() {
   const sinEscolaridad =
     porEscolaridad.find((d) => d.label === SIN_DATO)?.value ?? 0
 
-  // ─── Bloque operativo: top llegadas tarde administrativas ───────────
-  const conteoTarde = new Map<string, number>()
-  for (const r of (late.data ?? []) as { nombre_completo: string }[]) {
-    conteoTarde.set(r.nombre_completo, (conteoTarde.get(r.nombre_completo) ?? 0) + 1)
-  }
-  const topTarde = [...conteoTarde.entries()]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10)
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
@@ -215,26 +151,6 @@ export default async function HomePage() {
         sinEscolaridad={sinEscolaridad}
       />
 
-      {/* Bloque operativo rescatado del antiguo Dashboard */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Operación</h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Llegadas tarde de la mañana · administrativos · desde {CORTE_CONFIABLE}
-          </p>
-        </div>
-        <Panel titulo="Top llegadas tarde · administrativos">
-          {topTarde.length ? (
-            <BarrasSimple datos={topTarde} />
-          ) : (
-            <p className="text-sm text-gray-500">
-              Sin llegadas tarde registradas.
-            </p>
-          )}
-        </Panel>
-      </section>
-
-      {/* El cruce interactivo se monta aquí (archivo pendiente) */}
     </div>
   )
 }

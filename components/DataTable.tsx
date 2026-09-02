@@ -13,8 +13,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 
 type Row = Record<string, unknown>
@@ -236,32 +234,42 @@ export default function DataTable({
           </div>
 
           {/* ── Paginación ─────────────────────────────────────── */}
-          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-gray-500">
               Mostrando {start + 1}–
-              {Math.min(start + pageSize, filtered.length)} de {filtered.length}
+              {Math.min(start + pageSize, filtered.length)} de {filtered.length} registros
             </p>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={current === 1}
-                aria-label="Página anterior"
-                className="rounded-lg border border-gray-300 p-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <ChevronLeft className="h-4 w-4" />
+                Anterior
               </button>
-              <span className="px-2 text-sm text-gray-600">
-                Página {current} de {totalPages}
-              </span>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  type="button"
+                  onClick={() => setPage(number)}
+                  className={`min-w-8 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
+                    current === number
+                      ? 'bg-[#00369C] text-white shadow-sm'
+                      : 'border border-gray-200 bg-white text-gray-600 hover:border-[#00369C] hover:text-[#00369C]'
+                  }`}
+                  aria-current={current === number ? 'page' : undefined}
+                >
+                  {number}
+                </button>
+              ))}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={current === totalPages}
-                aria-label="Página siguiente"
-                className="rounded-lg border border-gray-300 p-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <ChevronRight className="h-4 w-4" />
+                Siguiente
               </button>
             </div>
           </div>

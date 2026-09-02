@@ -80,6 +80,7 @@ export default async function InasistenciasPage() {
         data={rows}
         searchPlaceholder="Buscar por nombre, área, motivo..."
         emptyMessage="No hay inasistencias registradas."
+        pageSize={20}
       />
     </div>
   )

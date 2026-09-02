@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { AlertTriangle, Clock3, Medal, Timer, Users } from 'lucide-react'
 
 // Mismo tipo que devuelve fn_llegadas_tarde_por_colaborador (con totales)
 type Fila = {
@@ -82,30 +83,29 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
     label,
     valor,
     sub,
-    acento = false,
+    icon: Icon,
+    tone = 'blue',
   }: {
     label: string
     valor: string
     sub?: string
-    acento?: boolean
+    icon: typeof Users
+    tone?: 'blue' | 'amber' | 'red' | 'slate'
   }) => (
-    <div
-      className={
-        'rounded-lg border p-4 bg-white ' +
-        (acento ? 'border-[#00369C]/30' : 'border-gray-200')
-      }
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-        {label}
-      </p>
-      <p
-        className={
-          'mt-1 text-2xl font-bold ' + (acento ? 'text-[#00369C]' : 'text-gray-900')
-        }
-      >
-        {valor}
-      </p>
-      {sub && <p className="mt-0.5 text-xs text-gray-500 truncate">{sub}</p>}
+    <div className="group rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">{label}</p>
+        <div className={`rounded-lg p-2 ${
+          tone === 'amber' ? 'bg-amber-50 text-amber-600' :
+          tone === 'red' ? 'bg-red-50 text-red-600' :
+          tone === 'slate' ? 'bg-slate-100 text-slate-600' :
+          'bg-blue-50 text-[#00369C]'
+        }`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-3 truncate text-2xl font-bold tracking-tight text-gray-900">{valor}</p>
+      {sub && <p className="mt-1 truncate text-xs text-gray-500">{sub}</p>}
     </div>
   )
 
@@ -114,14 +114,16 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
       <Card
         label="Colaboradores con tardanzas"
         valor={String(kpis.totalColaboradores)}
+        icon={Users}
       />
       <Card
         label="Minutos superó tolerancia"
         valor={fmtMin(kpis.totalMinutos)}
         sub="Mañana + tarde"
-        acento
+        icon={Timer}
+        tone="amber"
       />
-      <Card label="Días-tardanza" valor={String(kpis.totalDias)} sub="Mañana + tarde" />
+      <Card label="Días-tardanza" valor={String(kpis.totalDias)} sub="Mañana + tarde" icon={Clock3} />
       <Card
         label="Proceso más impuntual"
         valor={kpis.procArea}
@@ -130,11 +132,15 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
             ? `${kpis.procProm} min/día · ${kpis.procDias} días`
             : `Ninguno supera ${MIN_DIAS_PROCESO} días`
         }
+        icon={AlertTriangle}
+        tone="red"
       />
       <Card
         label="Top colaborador"
         valor={kpis.topNombre.split(' ').slice(0, 2).join(' ')}
         sub={`${fmtMin(kpis.topMinutos)} superó tolerancia`}
+        icon={Medal}
+        tone="slate"
       />
     </div>
   )
