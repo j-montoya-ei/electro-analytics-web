@@ -20,7 +20,7 @@ const routeTitles: Record<string, string> = {
 
 export default function Header({ userEmail }: { userEmail: string | undefined }) {
   const pathname = usePathname()
-  const title = routeTitles[pathname] || 'Gestión Humana Analytics'
+  const title = routeTitles[pathname] || 'Gestión Humana'
 
   // Generar iniciales del email para el avatar
   const getInitials = (email: string | undefined) => {
@@ -42,7 +42,7 @@ export default function Header({ userEmail }: { userEmail: string | undefined })
           {title}
         </h1>
         <span className="hidden text-sm text-gray-400 md:inline">
-          · Gestión Humana Analytics
+          · Gestión Humana
         </span>
       </div>
 

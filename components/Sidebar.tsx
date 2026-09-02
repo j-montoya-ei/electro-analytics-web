@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // Componente Sidebar - Navegación lateral colapsable
-// Gestión Humana Analytics · Electroingeniería
+// Gestión Humana · Electroingeniería
 // ═══════════════════════════════════════════════════════════
 'use client'
 import Link from 'next/link'

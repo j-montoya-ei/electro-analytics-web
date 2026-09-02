@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gestión Humana Analytics · Electroingeniería",
+  title: "Gestión Humana · Electroingeniería",
   description: "Dashboard de análisis de Gestión Humana - Electroingeniería S.A.S.",
   icons: {
     icon: "/logos/electroingenieria-isotipo.png",
