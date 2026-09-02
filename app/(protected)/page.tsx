@@ -7,7 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import KpiCard from '@/components/KpiCard'
 import CaracterizacionGraficos from '@/components/CaracterizacionGraficos'
-import { Users, Cake, History, Network, MapPin } from 'lucide-react'
+import { Users, Cake, History, Network, MapPin, BriefcaseBusiness } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,6 +85,7 @@ export default async function HomePage() {
   // ─── KPIs de planta ─────────────────────────────────────────────────
   const mujeres = filas.filter((f) => /fem/i.test(f.genero)).length
   const hombres = filas.filter((f) => /masc/i.test(f.genero)).length
+  const indefinidos = filas.filter((f) => /indefinido/i.test(f.tipo_contrato)).length
   const pctG = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
 
   const edades = filas
@@ -134,6 +135,12 @@ export default async function HomePage() {
         <KpiCard label="Antigüedad promedio" value={`${antigProm.toFixed(1)} años`} tone="blue" icon={<History className="w-5 h-5" />} />
         <KpiCard label="Procesos" value={porProceso.length} tone="blue" icon={<Network className="w-5 h-5" />} />
         <KpiCard label="Sedes" value={porSede.length} tone="red" icon={<MapPin className="w-5 h-5" />} />
+        <KpiCard
+          label="Contratos indefinidos"
+          value={`${indefinidos} · ${pctG(indefinidos)}%`}
+          tone="green"
+          icon={<BriefcaseBusiness className="w-5 h-5" />}
+        />
       </div>
 
       {/* Gráficos de caracterización (cliente) */}

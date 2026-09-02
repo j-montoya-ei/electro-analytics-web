@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AlertTriangle, Clock3, Medal, Timer, Users } from 'lucide-react'
+import { Clock3, Medal, Timer, Users } from 'lucide-react'
 
 // Mismo tipo que devuelve fn_llegadas_tarde_por_colaborador (con totales)
 type Fila = {
@@ -16,10 +16,6 @@ type Fila = {
   total_minutos: number
 }
 
-// Mínimo de días-tardanza para que un proceso compita en "más impuntual".
-// Evita que un proceso salga primero por 1-3 días atípicos (outliers).
-const MIN_DIAS_PROCESO = 10
-
 function fmtMin(min: number): string {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
@@ -32,6 +28,16 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
     const totalColaboradores = data.length
     const totalMinutos = data.reduce((s, f) => s + (f.total_minutos ?? 0), 0)
     const totalDias = data.reduce((s, f) => s + (f.total_dias ?? 0), 0)
+    const diasManana = data.reduce((s, f) => s + (f.tardanzas_oficiales ?? 0), 0)
+    const diasTarde = data.reduce((s, f) => s + (f.tardanzas_tarde ?? 0), 0)
+    const pctManana = totalDias > 0 ? Math.round((diasManana / totalDias) * 100) : 0
+    const pctTarde = totalDias > 0 ? Math.round((diasTarde / totalDias) * 100) : 0
+    const mayorIncidencia =
+      diasManana === diasTarde
+        ? 'Empate'
+        : diasManana > diasTarde
+          ? 'Entrada jornada'
+          : 'Regreso almuerzo'
 
     // Top colaborador (más minutos que superaron tolerancia)
     let top: Fila | null = null
@@ -39,43 +45,17 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
       if (!top || f.total_minutos > top.total_minutos) top = f
     }
 
-    // Proceso más impuntual: PROMEDIO de minutos por día tarde, pero solo entre
-    // procesos con al menos MIN_DIAS_PROCESO días-tardanza (para que el promedio
-    // sea representativo y no lo defina un caso suelto).
-    const porArea = new Map<string, { minutos: number; dias: number }>()
-    for (const f of data) {
-      const a = f.area ?? '—'
-      const acc = porArea.get(a) ?? { minutos: 0, dias: 0 }
-      acc.minutos += f.total_minutos ?? 0
-      acc.dias += f.total_dias ?? 0
-      porArea.set(a, acc)
-    }
-
-    let procArea = '—'
-    let procProm = -1
-    let procDias = 0
-    for (const [a, v] of porArea) {
-      if (v.dias < MIN_DIAS_PROCESO) continue // no compite: pocos días
-      const prom = v.dias > 0 ? v.minutos / v.dias : 0
-      if (prom > procProm) {
-        procProm = prom
-        procArea = a
-        procDias = v.dias
-      }
-    }
-    // Si ningún proceso alcanza el mínimo, mostrar aviso en vez de un dato falso.
-    const hayProceso = procProm >= 0
-
     return {
       totalColaboradores,
       totalMinutos,
       totalDias,
+      diasManana,
+      diasTarde,
+      pctManana,
+      pctTarde,
+      mayorIncidencia,
       topNombre: top?.nombre_completo ?? '—',
       topMinutos: top?.total_minutos ?? 0,
-      procArea: hayProceso ? procArea : '—',
-      procProm: hayProceso ? Math.round(procProm) : 0,
-      procDias,
-      hayProceso,
     }
   }, [data])
 
@@ -125,15 +105,11 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
       />
       <Card label="Días-tardanza" valor={String(kpis.totalDias)} sub="Mañana + tarde" icon={Clock3} />
       <Card
-        label="Proceso más impuntual"
-        valor={kpis.procArea}
-        sub={
-          kpis.hayProceso
-            ? `${kpis.procProm} min/día · ${kpis.procDias} días`
-            : `Ninguno supera ${MIN_DIAS_PROCESO} días`
-        }
-        icon={AlertTriangle}
-        tone="red"
+        label="Mayor incidencia"
+        valor={kpis.mayorIncidencia}
+        sub={`Mañana ${kpis.diasManana} · ${kpis.pctManana}% | Tarde ${kpis.diasTarde} · ${kpis.pctTarde}%`}
+        icon={Clock3}
+        tone="amber"
       />
       <Card
         label="Top colaborador"
