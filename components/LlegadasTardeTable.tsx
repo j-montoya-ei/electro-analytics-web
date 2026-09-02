@@ -112,10 +112,10 @@ export default function LlegadasTardeTable({
                 <th rowSpan={2} onClick={() => ordenarPor('area')} className={thTxt}>
                   Proceso{flecha('area')}
                 </th>
-                <th colSpan={4} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
+                <th colSpan={2} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
                   Mañana (Entrada)
                 </th>
-                <th colSpan={4} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
+                <th colSpan={2} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
                   Tarde (Regreso Almuerzo)
                 </th>
                 <th colSpan={2} className="px-3 py-2 text-center font-bold text-[#00369C] bg-blue-50/50 border-l border-gray-200">
@@ -130,23 +130,11 @@ export default function LlegadasTardeTable({
                 <th onClick={() => ordenarPor('minutos_oficiales')} className={thNum}>
                   Min (Tol){flecha('minutos_oficiales')}
                 </th>
-                <th onClick={() => ordenarPor('dias_despues_teorica')} className={thNum}>
-                  Días (Hora){flecha('dias_despues_teorica')}
-                </th>
-                <th onClick={() => ordenarPor('minutos_teoricos')} className={thNum}>
-                  Min (Hora){flecha('minutos_teoricos')}
-                </th>
                 <th onClick={() => ordenarPor('tardanzas_tarde')} className={thNum + ' border-l border-gray-200'}>
                   Días (Tol){flecha('tardanzas_tarde')}
                 </th>
                 <th onClick={() => ordenarPor('minutos_tarde_oficiales')} className={thNum}>
                   Min (Tol){flecha('minutos_tarde_oficiales')}
-                </th>
-                <th onClick={() => ordenarPor('dias_despues_tarde')} className={thNum}>
-                  Días (Hora){flecha('dias_despues_tarde')}
-                </th>
-                <th onClick={() => ordenarPor('minutos_tarde_teoricos')} className={thNum}>
-                  Min (Hora){flecha('minutos_teoricos')}
                 </th>
                 <th onClick={() => ordenarPor('total_dias')} className={thNum + ' border-l border-gray-200 font-bold text-gray-900 bg-blue-50/30'}>
                   Días{flecha('total_dias')}
@@ -169,14 +157,10 @@ export default function LlegadasTardeTable({
                   {/* Mañana */}
                   <td className="px-3 py-3 text-right text-gray-600 border-l border-gray-100">{f.tardanzas_oficiales}</td>
                   <td className="px-3 py-3 text-right font-medium text-gray-900">{f.minutos_oficiales}</td>
-                  <td className="px-3 py-3 text-right text-gray-500">{f.dias_despues_teorica}</td>
-                  <td className="px-3 py-3 text-right text-gray-500">{f.minutos_teoricos}</td>
 
                   {/* Tarde */}
                   <td className="px-3 py-3 text-right text-gray-600 border-l border-gray-100">{f.tardanzas_tarde}</td>
                   <td className="px-3 py-3 text-right font-medium text-amber-700">{f.minutos_tarde_oficiales}</td>
-                  <td className="px-3 py-3 text-right text-gray-500">{f.dias_despues_tarde}</td>
-                  <td className="px-3 py-3 text-right text-gray-500">{f.minutos_tarde_teoricos}</td>
 
                   {/* Totales */}
                   <td className="px-3 py-3 text-right font-bold text-gray-900 border-l border-gray-200 bg-blue-50/20">{f.total_dias}</td>
