@@ -30,19 +30,19 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   return (
     <aside
-      className={`sticky top-0 h-screen border-r border-gray-200/80 bg-white/95 transition-all duration-300 ${
+      className={`sticky top-0 h-screen border-r border-[#123b78] bg-[#092d6b] transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       } hidden md:flex md:flex-col`}
     >
       {/* Logo header */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-200/80 px-4">
+      <div className="flex h-16 items-center justify-center border-b border-white/15 px-4">
         {collapsed ? (
           <Image
             src="/logos/electroingenieria-isotipo.png"
             alt="Electroingeniería"
             width={32}
             height={32}
-            className="object-contain"
+            className="object-contain brightness-0 invert"
           />
         ) : (
           <Image
@@ -50,14 +50,14 @@ export default function Sidebar() {
             alt="Electroingeniería"
             width={160}
             height={40}
-            className="object-contain"
+            className="object-contain brightness-0 invert"
           />
         )}
       </div>
       {/* Navegación */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-5">
         {!collapsed && (
-          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
+          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200">
             Módulos
           </p>
         )}
@@ -70,8 +70,8 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-blue-50 font-semibold text-[#00369C] shadow-sm ring-1 ring-blue-100'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-white font-semibold text-[#092d6b] shadow-sm'
+                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
               } ${collapsed ? 'justify-center' : ''}`}
               title={collapsed ? item.label : undefined}
             >
@@ -84,7 +84,7 @@ export default function Sidebar() {
       {/* Botón colapsar */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex h-12 items-center justify-center border-t border-gray-200/80 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700"
+        className="flex h-12 items-center justify-center border-t border-white/15 text-blue-200 transition-colors hover:bg-white/10 hover:text-white"
         title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
       >
         {collapsed ? (
