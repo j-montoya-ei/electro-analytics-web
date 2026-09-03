@@ -10,8 +10,12 @@ type Fila = {
   area: string
   tardanzas_oficiales: number
   minutos_oficiales: number
+  dias_despues_teorica: number
+  minutos_teoricos: number
   tardanzas_tarde: number
   minutos_tarde_oficiales: number
+  dias_despues_tarde: number
+  minutos_tarde_teoricos: number
   total_dias: number
   total_minutos: number
 }
@@ -26,10 +30,32 @@ function fmtMin(min: number): string {
 export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
   const kpis = useMemo(() => {
     const totalColaboradores = data.length
-    const totalMinutos = data.reduce((s, f) => s + (f.total_minutos ?? 0), 0)
-    const totalDias = data.reduce((s, f) => s + (f.total_dias ?? 0), 0)
-    const diasManana = data.reduce((s, f) => s + (f.tardanzas_oficiales ?? 0), 0)
-    const diasTarde = data.reduce((s, f) => s + (f.tardanzas_tarde ?? 0), 0)
+    const totalMinutos = data.reduce(
+      (s, f) =>
+        s +
+        (f.minutos_oficiales ?? 0) +
+        (f.minutos_teoricos ?? 0) +
+        (f.minutos_tarde_oficiales ?? 0) +
+        (f.minutos_tarde_teoricos ?? 0),
+      0
+    )
+    const totalDias = data.reduce(
+      (s, f) =>
+        s +
+        (f.tardanzas_oficiales ?? 0) +
+        (f.dias_despues_teorica ?? 0) +
+        (f.tardanzas_tarde ?? 0) +
+        (f.dias_despues_tarde ?? 0),
+      0
+    )
+    const diasManana = data.reduce(
+      (s, f) => s + (f.tardanzas_oficiales ?? 0) + (f.dias_despues_teorica ?? 0),
+      0
+    )
+    const diasTarde = data.reduce(
+      (s, f) => s + (f.tardanzas_tarde ?? 0) + (f.dias_despues_tarde ?? 0),
+      0
+    )
     const pctManana = totalDias > 0 ? Math.round((diasManana / totalDias) * 100) : 0
     const pctTarde = totalDias > 0 ? Math.round((diasTarde / totalDias) * 100) : 0
     const mayorIncidencia =
@@ -39,11 +65,30 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
           ? 'Entrada jornada'
           : 'Regreso almuerzo'
 
-    // Top colaborador (más minutos que superaron tolerancia)
     let top: Fila | null = null
     for (const f of data) {
-      if (!top || f.total_minutos > top.total_minutos) top = f
+      const minutosDelTop =
+        (f.minutos_oficiales ?? 0) +
+        (f.minutos_teoricos ?? 0) +
+        (f.minutos_tarde_oficiales ?? 0) +
+        (f.minutos_tarde_teoricos ?? 0)
+      if (
+        !top ||
+        minutosDelTop >
+          ((top.minutos_oficiales ?? 0) +
+            (top.minutos_teoricos ?? 0) +
+            (top.minutos_tarde_oficiales ?? 0) +
+            (top.minutos_tarde_teoricos ?? 0))
+      ) {
+        top = f
+      }
     }
+
+    const totalTopMinutos =
+      (top?.minutos_oficiales ?? 0) +
+      (top?.minutos_teoricos ?? 0) +
+      (top?.minutos_tarde_oficiales ?? 0) +
+      (top?.minutos_tarde_teoricos ?? 0)
 
     return {
       totalColaboradores,
@@ -55,7 +100,7 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
       pctTarde,
       mayorIncidencia,
       topNombre: top?.nombre_completo ?? '—',
-      topMinutos: top?.total_minutos ?? 0,
+      topMinutos: totalTopMinutos,
     }
   }, [data])
 
@@ -97,13 +142,13 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
         icon={Users}
       />
       <Card
-        label="Minutos superó tolerancia"
+        label="Minutos acumulados"
         valor={fmtMin(kpis.totalMinutos)}
-        sub="Mañana + tarde"
+        sub="Tol + hora reglamentaria · Mañana + tarde"
         icon={Timer}
         tone="amber"
       />
-      <Card label="Días-tardanza" valor={String(kpis.totalDias)} sub="Mañana + tarde" icon={Clock3} />
+      <Card label="Días acumulados" valor={String(kpis.totalDias)} sub="Tol + hora reglamentaria · Mañana + tarde" icon={Clock3} />
       <Card
         label="Mayor incidencia"
         valor={kpis.mayorIncidencia}
