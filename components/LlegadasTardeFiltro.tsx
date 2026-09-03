@@ -52,7 +52,7 @@ export default function LlegadasTardeFiltro({
   }
 
   function historico() {
-    const ini = '2026-07-01' // migración de turnos a Buk
+    const ini = '2026-05-01' // inicio histórico solicitado por GH
     const fin = fmt(bogotaHoy())
     setD(ini); setH(fin)
     aplicar(ini, fin)
