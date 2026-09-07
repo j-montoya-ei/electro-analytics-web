@@ -66,14 +66,10 @@ export default async function LlegadasTardePage({
     .map((fila) => ({
       ...fila,
       total_dias:
-        (fila.tardanzas_oficiales ?? 0) +
         (fila.dias_despues_teorica ?? 0) +
-        (fila.tardanzas_tarde ?? 0) +
         (fila.dias_despues_tarde ?? 0),
       total_minutos:
-        (fila.minutos_oficiales ?? 0) +
         (fila.minutos_teoricos ?? 0) +
-        (fila.minutos_tarde_oficiales ?? 0) +
         (fila.minutos_tarde_teoricos ?? 0),
     }))
     .filter((fila) => fila.total_minutos > 0)

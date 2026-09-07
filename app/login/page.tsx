@@ -115,7 +115,11 @@ async function ErrorMessage({
   return (
     <div className="rounded-lg border border-red-200 bg-red-50 p-3">
       <p className="text-sm text-red-700">
-        Credenciales incorrectas. Verifica tu correo y contraseña.
+        {params.error === 'email_not_confirmed'
+          ? 'Tu correo aún no está confirmado en Supabase.'
+          : params.error === 'auth_unavailable'
+            ? 'No se pudo contactar el servicio de autenticación. Intenta nuevamente.'
+            : 'Correo o contraseña incorrectos. Verifica tus credenciales.'}
       </p>
     </div>
   )

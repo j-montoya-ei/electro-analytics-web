@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import LlegadasTardeDrilldown from './LlegadasTardeDrilldown'
+import * as XLSX from '@e965/xlsx'
 
 type Fila = {
   trab_id: string
@@ -89,6 +90,68 @@ export default function LlegadasTardeTable({
   const totalPaginas = Math.max(1, Math.ceil(filas.length / PAGE_SIZE))
   const filasVisibles = filas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
 
+  function exportarExcel() {
+    const filasExportadas = filas.slice(0, 20)
+    const hoja = XLSX.utils.aoa_to_sheet([
+      ['REPORTE DE LLEGADAS TARDE'],
+      ['Periodo', `${desde} a ${hasta}`],
+      ['Nota', 'El total acumulado usa únicamente HORA. TOL se muestra como referencia.'],
+      [],
+      [
+        'Colaborador', 'Proceso', 'Días TOL (mañana)', 'Min TOL (mañana)',
+        'Días HORA (mañana)', 'Min HORA (mañana)', 'Días TOL (tarde)',
+        'Min TOL (tarde)', 'Días HORA (tarde)', 'Min HORA (tarde)',
+        'Días total', 'Minutos total (HORA)',
+      ],
+      ...filasExportadas.map((f) => [
+        f.nombre_completo, f.area, f.tardanzas_oficiales, f.minutos_oficiales,
+        f.dias_despues_teorica, f.minutos_teoricos, f.tardanzas_tarde,
+        f.minutos_tarde_oficiales, f.dias_despues_tarde, f.minutos_tarde_teoricos,
+        f.total_dias, f.total_minutos,
+      ]),
+    ])
+    hoja['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }]
+    hoja['!cols'] = [
+      { wch: 30 }, { wch: 24 }, { wch: 15 }, { wch: 15 }, { wch: 16 },
+      { wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 },
+      { wch: 12 }, { wch: 18 },
+    ]
+    hoja['!rows'] = [{ hpt: 28 }, { hpt: 20 }, { hpt: 32 }, { hpt: 8 }, { hpt: 36 }]
+    hoja['A1'].s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 16 },
+      fill: { fgColor: { rgb: '00369C' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }
+    for (const celda of ['A2', 'A3']) {
+      hoja[celda].s = {
+        font: { italic: celda === 'A3', color: { rgb: '475569' } },
+        alignment: { vertical: 'center', wrapText: true },
+      }
+    }
+    for (let columna = 0; columna < 12; columna += 1) {
+      const celda = XLSX.utils.encode_cell({ r: 4, c: columna })
+      hoja[celda].s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '0F4C9A' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      }
+    }
+    for (let fila = 5; fila < 5 + filasExportadas.length; fila += 1) {
+      for (let columna = 0; columna < 12; columna += 1) {
+        const celda = XLSX.utils.encode_cell({ r: fila, c: columna })
+        hoja[celda].s = {
+          fill: { fgColor: { rgb: fila % 2 === 0 ? 'F4F7FB' : 'FFFFFF' } },
+          alignment: { vertical: 'center', wrapText: columna < 2 },
+        }
+      }
+      const total = XLSX.utils.encode_cell({ r: fila, c: 11 })
+      hoja[total].s = { font: { bold: true, color: { rgb: '00369C' } } }
+    }
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, 'Llegadas tarde')
+    XLSX.writeFile(libro, `llegadas-tarde-${desde}-${hasta}.xlsx`)
+  }
+
   useEffect(() => {
     setPagina(1)
   }, [data, sortKey, sortDir])
@@ -108,10 +171,21 @@ export default function LlegadasTardeTable({
   return (
     <div className="space-y-3">
       {/* Nota aclaratoria minimalista */}
-      <div className="bg-white rounded-lg border border-gray-200 p-3.5 text-xs text-gray-500 leading-relaxed shadow-sm">
-        <span className="font-semibold text-[#00369C]">TOL = Tolerancia:</span> minutos que exceden el margen de gracia permitido.{' '}
-        <span className="font-semibold text-gray-700">HORA = Hora reglamentaria:</span> minutos calculados desde la hora oficial de ingreso.{' '}
-        <span className="text-gray-400">|</span> <span className="italic">El total acumulado suma ambos conceptos (TOL + HORA) por turno y por jornada.</span>
+      <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3.5 text-xs leading-relaxed text-gray-500 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          <span className="font-semibold text-[#00369C]">TOL = Tolerancia:</span> minutos que exceden el margen de gracia permitido.{' '}
+          <span className="font-semibold text-gray-700">HORA = Hora reglamentaria:</span> minutos calculados desde la hora oficial de ingreso.{' '}
+          <span className="text-gray-400">|</span>{' '}
+          <span className="italic">El total acumulado usa únicamente HORA por turno y por jornada; TOL se muestra como referencia.</span>
+        </p>
+        <button
+          type="button"
+          onClick={exportarExcel}
+          disabled={filas.length === 0}
+          className="shrink-0 rounded-md bg-[#087F5B] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#06684B] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Exportar Excel (20)
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">

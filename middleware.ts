@@ -6,8 +6,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+function hasSupabaseConfig() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith('http')
+  )
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+
+  if (!hasSupabaseConfig()) {
+    return supabaseResponse
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,12 +42,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Verifica si hay un usuario logueado
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Si NO hay usuario y NO está en /login → redirige a /login
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&

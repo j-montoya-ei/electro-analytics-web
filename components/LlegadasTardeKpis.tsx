@@ -33,27 +33,23 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
     const totalMinutos = data.reduce(
       (s, f) =>
         s +
-        (f.minutos_oficiales ?? 0) +
         (f.minutos_teoricos ?? 0) +
-        (f.minutos_tarde_oficiales ?? 0) +
         (f.minutos_tarde_teoricos ?? 0),
       0
     )
     const totalDias = data.reduce(
       (s, f) =>
         s +
-        (f.tardanzas_oficiales ?? 0) +
         (f.dias_despues_teorica ?? 0) +
-        (f.tardanzas_tarde ?? 0) +
         (f.dias_despues_tarde ?? 0),
       0
     )
     const diasManana = data.reduce(
-      (s, f) => s + (f.tardanzas_oficiales ?? 0) + (f.dias_despues_teorica ?? 0),
+      (s, f) => s + (f.dias_despues_teorica ?? 0),
       0
     )
     const diasTarde = data.reduce(
-      (s, f) => s + (f.tardanzas_tarde ?? 0) + (f.dias_despues_tarde ?? 0),
+      (s, f) => s + (f.dias_despues_tarde ?? 0),
       0
     )
     const pctManana = totalDias > 0 ? Math.round((diasManana / totalDias) * 100) : 0
@@ -68,16 +64,12 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
     let top: Fila | null = null
     for (const f of data) {
       const minutosDelTop =
-        (f.minutos_oficiales ?? 0) +
         (f.minutos_teoricos ?? 0) +
-        (f.minutos_tarde_oficiales ?? 0) +
         (f.minutos_tarde_teoricos ?? 0)
       if (
         !top ||
         minutosDelTop >
-          ((top.minutos_oficiales ?? 0) +
-            (top.minutos_teoricos ?? 0) +
-            (top.minutos_tarde_oficiales ?? 0) +
+          ((top.minutos_teoricos ?? 0) +
             (top.minutos_tarde_teoricos ?? 0))
       ) {
         top = f
@@ -85,9 +77,7 @@ export default function LlegadasTardeKpis({ data }: { data: Fila[] }) {
     }
 
     const totalTopMinutos =
-      (top?.minutos_oficiales ?? 0) +
       (top?.minutos_teoricos ?? 0) +
-      (top?.minutos_tarde_oficiales ?? 0) +
       (top?.minutos_tarde_teoricos ?? 0)
 
     return {
