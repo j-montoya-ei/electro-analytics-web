@@ -16,6 +16,17 @@ function bogotaNow() {
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
 }
 const pad = (n: number) => String(n).padStart(2, '0')
+type InasistenciaRow = {
+  dni: string | number
+  ano: number
+  mes: number
+  dia: number
+  motivo: string | null
+  nombre_completo: string | null
+  cargo: string | null
+  area: string | null
+  turno: string | null
+}
 export default async function InasistenciasPage({
   searchParams,
 }: {
@@ -54,7 +65,7 @@ export default async function InasistenciasPage({
     )
   }
 
-  const rows = (filas ?? [])
+  const rows = ((filas ?? []) as InasistenciaRow[])
     .filter((r) => {
       const fecha = `${r.ano}-${pad(r.mes)}-${pad(r.dia)}`
       return fecha >= desde && fecha <= hasta
