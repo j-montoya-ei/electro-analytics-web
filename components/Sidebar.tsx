@@ -13,6 +13,7 @@ import {
   UserX,
   Clock,
   Timer,
+  Fingerprint,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
