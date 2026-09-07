@@ -34,6 +34,14 @@ function hhmmDesdeMinutos(total: number): string {
   ).padStart(2, '0')}`
 }
 
+function minutosDesdeHoraOficial(dia: DetalleDia): number {
+  return Math.max(
+    0,
+    minutosDesdeMedianoche(dia.hora_real) -
+      minutosDesdeMedianoche(dia.hora_teorica)
+  )
+}
+
 export default function LlegadasTardeDrilldown({
   trabId,
   nombre,
@@ -86,9 +94,10 @@ export default function LlegadasTardeDrilldown({
 
   // KPIs del colaborador
   const totalDias = dias.length
-  const totalMin = dias.reduce((s, d) => s + d.minutos, 0)
+  const totalMin = dias.reduce((s, d) => s + minutosDesdeHoraOficial(d), 0)
   const peor = dias.reduce<DetalleDia | null>(
-    (max, d) => (!max || d.minutos > max.minutos ? d : max),
+    (max, d) =>
+      !max || minutosDesdeHoraOficial(d) > minutosDesdeHoraOficial(max) ? d : max,
     null
   )
   const diasManana = dias.filter((d) => d.momento === 'Mañana').length
@@ -128,14 +137,14 @@ export default function LlegadasTardeDrilldown({
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">
-              Superó tolerancia
+              Minutos desde hora oficial
             </p>
             <p className="text-xl font-bold text-[#00369C]">{fmtMin(totalMin)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">Peor día</p>
             <p className="text-xl font-bold text-gray-900">
-              {peor ? `${peor.minutos} min` : '—'}
+              {peor ? `${minutosDesdeHoraOficial(peor)} min` : '—'}
             </p>
             {peor && <p className="text-xs text-gray-500">{peor.fecha}</p>}
           </div>
@@ -161,7 +170,7 @@ export default function LlegadasTardeDrilldown({
           )}
           {!cargando && !error && dias.length === 0 && (
             <p className="text-sm text-gray-500 py-8 text-center">
-              Sin días que superaran la tolerancia en el rango.
+              Sin llegadas tarde registradas en el rango.
             </p>
           )}
           {!cargando && !error && dias.length > 0 && (
@@ -172,7 +181,7 @@ export default function LlegadasTardeDrilldown({
                   <th className="py-2 pr-4 font-semibold">Momento</th>
                   <th className="py-2 pr-4 font-semibold">Debía marcar</th>
                   <th className="py-2 pr-4 font-semibold">Marcó</th>
-                  <th className="py-2 text-right font-semibold">Superó tolerancia</th>
+                  <th className="py-2 text-right font-semibold">Minutos desde hora oficial</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -216,7 +225,10 @@ export default function LlegadasTardeDrilldown({
                       {hhmm(d.hora_real)}
                     </td>
                     <td className="py-2 text-right font-semibold text-gray-900">
-                      <div>{d.minutos} min</div>
+                      <div>{minutosDesdeHoraOficial(d)} min</div>
+                      <div className="mt-1 text-xs font-normal text-gray-500">
+                        {d.minutos} min sobre tolerancia
+                      </div>
                       {finPermiso && (
                         <div className="mt-1 text-xs font-normal text-gray-500">
                           {minutosDespuesPermiso} min después del permiso
