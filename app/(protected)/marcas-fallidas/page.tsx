@@ -3,6 +3,7 @@
 // Server Component: llama las funciones SQL por RPC y renderiza
 //   - fn_marcas_fallidas_por_colaborador(desde, hasta)  → ranking
 //   - fn_marcas_fallidas_por_error(desde, hasta)         → frecuencia
+// El detalle por colaborador (drilldown) lo maneja MarcasFallidasTable.
 //
 // Ubicación: app/(protected)/marcas-fallidas/page.tsx
 // ═══════════════════════════════════════════════════════════
@@ -10,6 +11,7 @@
 import { createClient } from '@/lib/supabase/server'
 import MarcasFallidasFiltro from '@/components/MarcasFallidasFiltro'
 import CargarMarcasFallidasBoton from '@/components/CargarMarcasFallidasBoton'
+import MarcasFallidasTable from '@/components/MarcasFallidasTable'
 import { AlertTriangle, Users, Fingerprint } from 'lucide-react'
 
 function bogotaNow() {
@@ -137,47 +139,8 @@ export default async function MarcasFallidasPage({
         </div>
       </div>
 
-      {/* Ranking por colaborador */}
-      <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-800">
-            Ranking de colaboradores por inconsistencias
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-5 py-3 text-left font-semibold">#</th>
-                <th className="px-5 py-3 text-left font-semibold">Colaborador</th>
-                <th className="px-5 py-3 text-left font-semibold">Documento</th>
-                <th className="px-3 py-3 text-right font-semibold">Entrada</th>
-                <th className="px-3 py-3 text-right font-semibold">Salida</th>
-                <th className="px-5 py-3 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {colaboradores.map((c, i) => (
-                <tr key={c.rut} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 text-gray-400">{i + 1}</td>
-                  <td className="px-5 py-3 font-medium text-gray-900">{c.nombre}</td>
-                  <td className="px-5 py-3 text-gray-500">{c.rut}</td>
-                  <td className="px-3 py-3 text-right text-gray-600">{c.fallas_entrada}</td>
-                  <td className="px-3 py-3 text-right text-gray-600">{c.fallas_salida}</td>
-                  <td className="px-5 py-3 text-right font-bold text-[#00369C]">{c.total_fallas}</td>
-                </tr>
-              ))}
-              {colaboradores.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
-                    No se registran marcas fallidas en el rango seleccionado. Usa &ldquo;Cargar marcas fallidas&rdquo; para subir el reporte de Buk.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Ranking por colaborador (con drilldown) */}
+      <MarcasFallidasTable data={colaboradores} desde={desde} hasta={hasta} />
 
       {/* Frecuencia por tipo de error */}
       {errores.length > 0 && (
