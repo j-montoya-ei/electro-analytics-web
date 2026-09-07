@@ -16,6 +16,7 @@ const routeTitles: Record<string, string> = {
   '/inasistencias': 'Inasistencias',
   '/llegadas-tarde': 'Llegadas tarde',
   '/horas-extras': 'Horas extras',
+    '/marcas-fallidas': 'Marcas fallidas',
 }
 
 export default function Header({ userEmail }: { userEmail: string | undefined }) {
