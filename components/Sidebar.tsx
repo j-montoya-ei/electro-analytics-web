@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { PieChart, Users, UserX, Clock, Timer, Fingerprint, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Caracterización', icon: PieChart },
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/inasistencias', label: 'Inasistencias', icon: UserX },
   { href: '/llegadas-tarde', label: 'Llegadas tarde', icon: Clock },
   { href: '/horas-extras', label: 'Horas extras', icon: Timer },
+  { href: '/marcas-fallidas', label: 'Marcas fallidas', icon: Fingerprint },
 ]
 
 export default function Sidebar() {
