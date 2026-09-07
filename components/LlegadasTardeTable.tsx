@@ -94,58 +94,64 @@ export default function LlegadasTardeTable({
     const filasExportadas = filas.slice(0, 20)
     const hoja = XLSX.utils.aoa_to_sheet([
       ['REPORTE DE LLEGADAS TARDE'],
-      ['Periodo', `${desde} a ${hasta}`],
-      ['Nota', 'El total acumulado usa únicamente HORA. TOL se muestra como referencia.'],
+      [`Electroingeniería S.A.S.  ·  Periodo: ${desde} a ${hasta}  ·  Ordenado por minutos HORA`],
       [],
       [
-        'Colaborador', 'Proceso', 'Días TOL (mañana)', 'Min TOL (mañana)',
-        'Días HORA (mañana)', 'Min HORA (mañana)', 'Días TOL (tarde)',
-        'Min TOL (tarde)', 'Días HORA (tarde)', 'Min HORA (tarde)',
-        'Días total', 'Minutos total (HORA)',
+        '#', 'Colaborador', 'Proceso', 'Tardanzas mañana', 'Min. mañana',
+        'Tardanzas tarde', 'Min. tarde', 'Total días', 'Total minutos',
       ],
-      ...filasExportadas.map((f) => [
-        f.nombre_completo, f.area, f.tardanzas_oficiales, f.minutos_oficiales,
-        f.dias_despues_teorica, f.minutos_teoricos, f.tardanzas_tarde,
-        f.minutos_tarde_oficiales, f.dias_despues_tarde, f.minutos_tarde_teoricos,
+      ...filasExportadas.map((f, index) => [
+        index + 1, f.nombre_completo, f.area, f.dias_despues_teorica,
+        f.minutos_teoricos, f.dias_despues_tarde, f.minutos_tarde_teoricos,
         f.total_dias, f.total_minutos,
       ]),
     ])
-    hoja['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }]
-    hoja['!cols'] = [
-      { wch: 30 }, { wch: 24 }, { wch: 15 }, { wch: 15 }, { wch: 16 },
-      { wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 },
-      { wch: 12 }, { wch: 18 },
+    hoja['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
     ]
-    hoja['!rows'] = [{ hpt: 28 }, { hpt: 20 }, { hpt: 32 }, { hpt: 8 }, { hpt: 36 }]
+    hoja['!cols'] = [
+      { wch: 5 }, { wch: 34 }, { wch: 26 }, { wch: 17 }, { wch: 14 },
+      { wch: 17 }, { wch: 14 }, { wch: 12 }, { wch: 16 },
+    ]
+    hoja['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 8 }, { hpt: 38 }]
+    hoja['!autofilter'] = { ref: `A4:I${4 + filasExportadas.length}` }
+    hoja['!freeze'] = { xSplit: 3, ySplit: 4 }
     hoja['A1'].s = {
       font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 16 },
-      fill: { fgColor: { rgb: '00369C' } },
+      fill: { fgColor: { rgb: '092D6B' } },
       alignment: { horizontal: 'center', vertical: 'center' },
     }
-    for (const celda of ['A2', 'A3']) {
-      hoja[celda].s = {
-        font: { italic: celda === 'A3', color: { rgb: '475569' } },
-        alignment: { vertical: 'center', wrapText: true },
-      }
+    hoja['A2'].s = {
+      font: { bold: true, color: { rgb: '24456F' }, sz: 11 },
+      alignment: { horizontal: 'left', vertical: 'center' },
     }
-    for (let columna = 0; columna < 12; columna += 1) {
-      const celda = XLSX.utils.encode_cell({ r: 4, c: columna })
+    for (let columna = 0; columna < 9; columna += 1) {
+      const celda = XLSX.utils.encode_cell({ r: 3, c: columna })
       hoja[celda].s = {
-        font: { bold: true, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '0F4C9A' } },
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+        fill: { fgColor: { rgb: '1B4F91' } },
         alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '092D6B' } },
+          bottom: { style: 'thin', color: { rgb: '092D6B' } },
+          right: { style: 'thin', color: { rgb: 'AFC4DF' } },
+        },
       }
     }
-    for (let fila = 5; fila < 5 + filasExportadas.length; fila += 1) {
-      for (let columna = 0; columna < 12; columna += 1) {
+    for (let fila = 4; fila < 4 + filasExportadas.length; fila += 1) {
+      for (let columna = 0; columna < 9; columna += 1) {
         const celda = XLSX.utils.encode_cell({ r: fila, c: columna })
         hoja[celda].s = {
-          fill: { fgColor: { rgb: fila % 2 === 0 ? 'F4F7FB' : 'FFFFFF' } },
-          alignment: { vertical: 'center', wrapText: columna < 2 },
+          fill: { fgColor: { rgb: fila % 2 === 0 ? 'FFFFFF' : 'EEF3F8' } },
+          font: { color: { rgb: columna === 8 ? '092D6B' : '1F2937' }, bold: columna === 8 },
+          alignment: { horizontal: columna < 3 ? 'left' : 'center', vertical: 'center', wrapText: columna < 3 },
+          border: {
+            bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          },
         }
       }
-      const total = XLSX.utils.encode_cell({ r: fila, c: 11 })
-      hoja[total].s = { font: { bold: true, color: { rgb: '00369C' } } }
     }
     const libro = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(libro, hoja, 'Llegadas tarde')
