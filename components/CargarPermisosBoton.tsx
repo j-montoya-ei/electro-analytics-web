@@ -90,7 +90,7 @@ export default function CargarPermisosBoton() {
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
           <span>
             {resumen.insertados} permiso(s) nuevo(s) · {resumen.ya_existentes} ya
-            existían · {resumen.descartadas} descartadas (por día)
+            existían · {resumen.descartadas} descartadas (por día o duplicadas)
           </span>
         </div>
       )}
