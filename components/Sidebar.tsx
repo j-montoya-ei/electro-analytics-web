@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { PieChart, Users, UserX, Clock, Timer, Fingerprint, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Caracterización', icon: PieChart },
