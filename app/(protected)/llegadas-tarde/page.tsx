@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import LlegadasTardeTable from '@/components/LlegadasTardeTable'
 import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
 import LlegadasTardeKpis from '@/components/LlegadasTardeKpis'
+import CargarPermisosBoton from '@/components/CargarPermisosBoton'
 // Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
   const now = new Date()
@@ -78,14 +79,17 @@ export default async function LlegadasTardePage({
     .filter((fila) => fila.total_minutos > 0)
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Llegadas tarde</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          {filas.length} colaboradores · {desde} a {hasta} · Electroingeniería S.A.S.
-        </p>
-        <p className="mt-2 text-sm leading-6 text-gray-500">
-          Identifica tardanzas al iniciar la jornada y al regresar del almuerzo. Los permisos aprobados se consideran hasta su hora de finalización.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Llegadas tarde</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {filas.length} colaboradores · {desde} a {hasta} · Electroingeniería S.A.S.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            Identifica tardanzas al iniciar la jornada y al regresar del almuerzo. Los permisos aprobados se consideran hasta su hora de finalización.
+          </p>
+        </div>
+        <CargarPermisosBoton />
       </div>
       <LlegadasTardeFiltro desde={desde} hasta={hasta} />
       <LlegadasTardeKpis data={filas} />
