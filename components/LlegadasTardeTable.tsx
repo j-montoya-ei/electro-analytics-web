@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import LlegadasTardeDrilldown from './LlegadasTardeDrilldown'
-import * as XLSX from '@e965/xlsx'
+import * as XLSX from 'xlsx-js-style'
 
 type Fila = {
   trab_id: string
@@ -91,68 +91,203 @@ export default function LlegadasTardeTable({
   const filasVisibles = filas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
 
   function exportarExcel() {
-    const filasExportadas = filas.slice(0, 20)
-    const hoja = XLSX.utils.aoa_to_sheet([
-      ['REPORTE DE LLEGADAS TARDE'],
-      [`Electroingeniería S.A.S.  ·  Periodo: ${desde} a ${hasta}  ·  Ordenado por minutos HORA`],
-      [],
-      [
-        '#', 'Colaborador', 'Proceso', 'Tardanzas mañana', 'Min. mañana',
-        'Tardanzas tarde', 'Min. tarde', 'Total días', 'Total minutos',
-      ],
-      ...filasExportadas.map((f, index) => [
-        index + 1, f.nombre_completo, f.area, f.dias_despues_teorica,
-        f.minutos_teoricos, f.dias_despues_tarde, f.minutos_tarde_teoricos,
+    // Top 20 por minutos totales acumulados (TOL + HORA), independiente del
+    // orden en pantalla, para que el título "Top N ... con más llegadas tarde"
+    // sea siempre veraz. (Cambio deliberado: antes exportaba el orden de la vista.)
+    const filasExportadas = [...data]
+      .sort((a, b) => b.total_minutos - a.total_minutos)
+      .slice(0, 20)
+
+    const n = filasExportadas.length
+    const NCOLS = 13
+    const R_TITULO = 0
+    const R_SUB = 1
+    const R_SPACER = 2
+    const R_GRUPO = 3
+    const R_SUBHDR = 4
+    const R_DATA0 = 5
+    const R_FOOTER = R_DATA0 + n
+
+    // ── Matriz de valores ─────────────────────────────────────────────
+    const aoa: (string | number)[][] = []
+    aoa[R_TITULO] = [
+      `Top ${n} colaboradores con más llegadas tarde — Electroingeniería S.A.S.`,
+    ]
+    aoa[R_SUB] = [
+      `Período: ${desde} a ${hasta}  ·  Ordenado por minutos totales acumulados (mañana + tarde)`,
+    ]
+    aoa[R_SPACER] = []
+    aoa[R_GRUPO] = [
+      '#', 'Colaborador', 'Proceso',
+      'MAÑANA (ENTRADA)', '', '', '',
+      'TARDE (REGRESO ALMUERZO)', '', '', '',
+      'TOTAL ACUMULADO', '',
+    ]
+    aoa[R_SUBHDR] = [
+      '', '', '',
+      'Días (TOL)', 'Min (TOL)', 'Días (HORA)', 'Min (HORA)',
+      'Días (TOL)', 'Min (TOL)', 'Días (HORA)', 'Min (HORA)',
+      'Días', 'Minutos',
+    ]
+    filasExportadas.forEach((f, i) => {
+      aoa[R_DATA0 + i] = [
+        i + 1, f.nombre_completo, f.area,
+        f.tardanzas_oficiales, f.minutos_oficiales, f.dias_despues_teorica, f.minutos_teoricos,
+        f.tardanzas_tarde, f.minutos_tarde_oficiales, f.dias_despues_tarde, f.minutos_tarde_teoricos,
         f.total_dias, f.total_minutos,
-      ]),
-    ])
+      ]
+    })
+    aoa[R_FOOTER] = [
+      'TOL = minutos que superaron la tolerancia de gracia (7 min).  ' +
+        'HORA = minutos transcurridos desde la hora teórica.  ' +
+        'El total acumulado suma TOL + HORA de mañana y tarde.  ' +
+        'Se consideran permisos aprobados y las excepciones de horario vigentes.',
+    ]
+
+    const hoja = XLSX.utils.aoa_to_sheet(aoa)
+
+    // ── Combinaciones ─────────────────────────────────────────────────
     hoja['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
+      { s: { r: R_TITULO, c: 0 }, e: { r: R_TITULO, c: NCOLS - 1 } },
+      { s: { r: R_SUB, c: 0 }, e: { r: R_SUB, c: NCOLS - 1 } },
+      { s: { r: R_GRUPO, c: 0 }, e: { r: R_SUBHDR, c: 0 } }, // #
+      { s: { r: R_GRUPO, c: 1 }, e: { r: R_SUBHDR, c: 1 } }, // Colaborador
+      { s: { r: R_GRUPO, c: 2 }, e: { r: R_SUBHDR, c: 2 } }, // Proceso
+      { s: { r: R_GRUPO, c: 3 }, e: { r: R_GRUPO, c: 6 } }, // Mañana
+      { s: { r: R_GRUPO, c: 7 }, e: { r: R_GRUPO, c: 10 } }, // Tarde
+      { s: { r: R_GRUPO, c: 11 }, e: { r: R_GRUPO, c: 12 } }, // Total
+      { s: { r: R_FOOTER, c: 0 }, e: { r: R_FOOTER, c: NCOLS - 1 } },
     ]
+
+    // ── Anchos de columna ─────────────────────────────────────────────
     hoja['!cols'] = [
-      { wch: 5 }, { wch: 34 }, { wch: 26 }, { wch: 17 }, { wch: 14 },
-      { wch: 17 }, { wch: 14 }, { wch: 12 }, { wch: 16 },
+      { wch: 4 }, { wch: 32 }, { wch: 24 },
+      { wch: 10 }, { wch: 10 }, { wch: 11 }, { wch: 11 },
+      { wch: 10 }, { wch: 10 }, { wch: 11 }, { wch: 11 },
+      { wch: 8 }, { wch: 11 },
     ]
-    hoja['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 8 }, { hpt: 38 }]
-    hoja['!autofilter'] = { ref: `A4:I${4 + filasExportadas.length}` }
-    hoja['!freeze'] = { xSplit: 3, ySplit: 4 }
-    hoja['A1'].s = {
-      font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 16 },
-      fill: { fgColor: { rgb: '092D6B' } },
+
+    // ── Altos de fila ─────────────────────────────────────────────────
+    const altos: { hpt: number }[] = []
+    altos[R_TITULO] = { hpt: 26 }
+    altos[R_SUB] = { hpt: 16 }
+    altos[R_SPACER] = { hpt: 6 }
+    altos[R_GRUPO] = { hpt: 20 }
+    altos[R_SUBHDR] = { hpt: 26 }
+    altos[R_FOOTER] = { hpt: 40 }
+    hoja['!rows'] = altos
+
+    // Congelar encabezados + 3 primeras columnas (si la librería lo soporta)
+    hoja['!freeze'] = { xSplit: 3, ySplit: R_DATA0 }
+
+    // ── Paleta ────────────────────────────────────────────────────────
+    const NAVY = '092D6B'
+    const MID = '1B4F91'
+    const CLARO = 'DCE6F1'
+    const ZEBRA = 'EEF3F8'
+    const TOTAL_FILL = 'EAF0F9'
+    const GRIS_TXT = '1F2937'
+    const GRIS_SUAVE = '6B7280'
+    const NARANJA = 'C0501E'
+    const BORDE = 'AFC4DF'
+    const BORDE_SUAVE = 'D8E1EC'
+
+    const set = (r: number, c: number, s: object) => {
+      const ref = XLSX.utils.encode_cell({ r, c })
+      if (!hoja[ref]) hoja[ref] = { t: 's', v: '' }
+      hoja[ref].s = s
+    }
+
+    const bordeHdr = {
+      top: { style: 'thin', color: { rgb: NAVY } },
+      bottom: { style: 'thin', color: { rgb: NAVY } },
+      left: { style: 'thin', color: { rgb: BORDE } },
+      right: { style: 'thin', color: { rgb: BORDE } },
+    }
+
+    // Título y subtítulo
+    set(R_TITULO, 0, {
+      font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 },
+      fill: { fgColor: { rgb: NAVY } },
       alignment: { horizontal: 'center', vertical: 'center' },
+    })
+    set(R_SUB, 0, {
+      font: { italic: true, color: { rgb: GRIS_SUAVE }, sz: 10 },
+      alignment: { horizontal: 'center', vertical: 'center' },
+    })
+
+    // Encabezado izquierdo (#, Colaborador, Proceso) — merge R_GRUPO:R_SUBHDR
+    ;[0, 1, 2].forEach((c) => {
+      set(R_GRUPO, c, {
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+        fill: { fgColor: { rgb: NAVY } },
+        alignment: { horizontal: c === 0 ? 'center' : 'left', vertical: 'center', wrapText: true },
+        border: bordeHdr,
+      })
+      // parte inferior del merge (para cerrar bordes/relleno)
+      set(R_SUBHDR, c, { fill: { fgColor: { rgb: NAVY } }, border: bordeHdr })
+    })
+
+    // Grupos Mañana / Tarde (navy) y Total (claro)
+    for (let c = 3; c <= 12; c += 1) {
+      const esTotal = c >= 11
+      set(R_GRUPO, c, {
+        font: { bold: true, color: { rgb: esTotal ? NAVY : 'FFFFFF' }, sz: 10 },
+        fill: { fgColor: { rgb: esTotal ? CLARO : NAVY } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: bordeHdr,
+      })
     }
-    hoja['A2'].s = {
-      font: { bold: true, color: { rgb: '24456F' }, sz: 11 },
-      alignment: { horizontal: 'left', vertical: 'center' },
-    }
-    for (let columna = 0; columna < 9; columna += 1) {
-      const celda = XLSX.utils.encode_cell({ r: 3, c: columna })
-      hoja[celda].s = {
-        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-        fill: { fgColor: { rgb: '1B4F91' } },
+
+    // Subencabezados (Días/Min ...)
+    for (let c = 3; c <= 12; c += 1) {
+      const esTotal = c >= 11
+      set(R_SUBHDR, c, {
+        font: { bold: true, color: { rgb: esTotal ? NAVY : 'FFFFFF' }, sz: 9 },
+        fill: { fgColor: { rgb: esTotal ? CLARO : MID } },
         alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-        border: {
-          top: { style: 'thin', color: { rgb: '092D6B' } },
-          bottom: { style: 'thin', color: { rgb: '092D6B' } },
-          right: { style: 'thin', color: { rgb: 'AFC4DF' } },
-        },
-      }
+        border: bordeHdr,
+      })
     }
-    for (let fila = 4; fila < 4 + filasExportadas.length; fila += 1) {
-      for (let columna = 0; columna < 9; columna += 1) {
-        const celda = XLSX.utils.encode_cell({ r: fila, c: columna })
-        hoja[celda].s = {
-          fill: { fgColor: { rgb: fila % 2 === 0 ? 'FFFFFF' : 'EEF3F8' } },
-          font: { color: { rgb: columna === 8 ? '092D6B' : '1F2937' }, bold: columna === 8 },
-          alignment: { horizontal: columna < 3 ? 'left' : 'center', vertical: 'center', wrapText: columna < 3 },
-          border: {
-            bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-            right: { style: 'thin', color: { rgb: 'E2E8F0' } },
+
+    // Datos
+    for (let i = 0; i < n; i += 1) {
+      const r = R_DATA0 + i
+      const zebra = i % 2 === 1 ? ZEBRA : 'FFFFFF'
+      for (let c = 0; c < NCOLS; c += 1) {
+        const esTexto = c === 1 || c === 2
+        const esTotalMin = c === 12
+        const esTotalDias = c === 11
+        const esMinTol = c === 4 || c === 8
+        const val = aoa[r][c]
+        let color = GRIS_TXT
+        if (esTotalMin) color = NAVY
+        else if (esMinTol && typeof val === 'number' && val > 0) color = NARANJA
+        set(r, c, {
+          font: { color: { rgb: color }, bold: esTotalMin || esTotalDias },
+          fill: { fgColor: { rgb: esTotalDias || esTotalMin ? TOTAL_FILL : zebra } },
+          alignment: {
+            horizontal: c === 0 ? 'center' : esTexto ? 'left' : 'center',
+            vertical: 'center',
+            wrapText: esTexto,
           },
-        }
+          border: {
+            bottom: { style: 'thin', color: { rgb: BORDE_SUAVE } },
+            right: { style: 'thin', color: { rgb: 'E8EDF4' } },
+            ...(c === 3 || c === 7 || c === 11
+              ? { left: { style: 'thin', color: { rgb: BORDE } } }
+              : {}),
+          },
+        })
       }
     }
+
+    // Nota al pie
+    set(R_FOOTER, 0, {
+      font: { italic: true, color: { rgb: GRIS_SUAVE }, sz: 8 },
+      alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+    })
+
     const libro = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(libro, hoja, 'Llegadas tarde')
     XLSX.writeFile(libro, `llegadas-tarde-${desde}-${hasta}.xlsx`)
@@ -182,7 +317,7 @@ export default function LlegadasTardeTable({
           <span className="font-semibold text-[#00369C]">TOL = Tolerancia:</span> minutos que exceden el margen de gracia permitido.{' '}
           <span className="font-semibold text-gray-700">HORA = Hora reglamentaria:</span> minutos calculados desde la hora oficial de ingreso.{' '}
           <span className="text-gray-400">|</span>{' '}
-          <span className="italic">El total acumulado usa únicamente HORA por turno y por jornada; TOL se muestra como referencia.</span>
+          <span className="italic">El total acumulado suma ambos conceptos (TOL + HORA) por turno y por jornada.</span>
         </p>
         <button
           type="button"
