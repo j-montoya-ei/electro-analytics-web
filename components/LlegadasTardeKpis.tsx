@@ -6,7 +6,7 @@ import { Clock3, Medal, Timer, Users } from 'lucide-react'
 // Mismo tipo que devuelve fn_llegadas_tarde_por_colaborador (con totales)
 type Fila = {
   trab_id: string
-  nombre_completo: string
+  nombre_completo: string 
   area: string
   tardanzas_oficiales: number
   minutos_oficiales: number
