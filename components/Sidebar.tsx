@@ -15,6 +15,7 @@ import {
   Timer,
   Fingerprint,
   Stethoscope,
+  Coins,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
