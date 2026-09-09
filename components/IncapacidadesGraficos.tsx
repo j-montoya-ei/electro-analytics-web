@@ -1,11 +1,10 @@
 // ═══════════════════════════════════════════════════════════
 // IncapacidadesGraficos (client component)
-// Recibe las filas YA filtradas y dibuja los paneles del tablero
-// con Recharts. Agrega en memoria; las reglas de negocio ya vienen
-// resueltas como flags/campos desde vw_incapacidades.
-//
-// Cubre lo que sale del BASE (incapacidades). Los paneles de recaudo
-// (mes a mes, recuperado, cumplimiento por EPS) van en la pista RECAUDO.
+// Recibe las filas YA filtradas y dibuja los paneles con Recharts.
+// Tooltips ENRIQUECIDOS: cada categoría muestra incap · días · valor
+// (como el HTML original). Agrega en memoria; las reglas de negocio
+// vienen resueltas desde vw_incapacidades. Cubre lo del BASE; el
+// recaudo va en la pista RECAUDO.
 //
 // Ubicación: components/IncapacidadesGraficos.tsx
 // ═══════════════════════════════════════════════════════════
@@ -29,6 +28,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import type { TooltipProps } from 'recharts'
 
 const SIN_DATO = '(sin dato)'
 const norm = (v: string | null | undefined) =>
@@ -37,16 +37,17 @@ const num = (v: number | string | null | undefined) => {
   const n = typeof v === 'number' ? v : v == null ? 0 : Number(v)
   return Number.isFinite(n) ? n : 0
 }
+// Compacto para KPIs y ejes; completo para tooltips (ej. $2.240.262).
 const fmtCosto = (n: number) =>
   n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${n.toFixed(0)}`
+const fmtCOP = (n: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
 const trunc = (s: string, n = 22) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 
 const AZUL = '#00369C'
 const NARANJA = '#EA8C00'
 const TEAL = '#0E7490'
 const PALETA = ['#00369C', '#2563EB', '#60A5FA', '#93C5FD', '#1E3A8A', '#3B82F6', '#0E7490']
-
-const tooltipStyle = { borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 } as const
 
 export type Row = {
   dni: string
@@ -63,8 +64,12 @@ export type Row = {
   entidad_norm: string
   estado: string | null
   nro_dias: number | string | null
+  total_incapacidad: number | string | null
   valor_pendiente_cobrar: number | string | null
 }
+
+// Métricas agregadas por categoría (cargo, proceso, entidad, diagnóstico…)
+type Cat = { name: string; incap: number; dias: number; valor: number }
 
 type Dim = 'proceso' | 'unidad' | 'cargo' | 'diagnostico'
 const DIM_LABEL: Record<Dim, string> = {
@@ -104,9 +109,18 @@ export default function IncapacidadesGraficos({
       .sort((a, b) => a.orden - b.orden)
   }, [rows])
 
-  const porClase = useMemo(() => cuentaPor(rows, (r) => norm(r.clase)), [rows])
-  const porEntidad = useMemo(() => cuentaPor(rows, (r) => r.entidad_norm || SIN_DATO), [rows])
-  const porDx = useMemo(() => cuentaPor(rows, (r) => norm(r.descripcion_dx)).slice(0, 8), [rows])
+  const porClase = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const r of rows) m.set(norm(r.clase), (m.get(norm(r.clase)) ?? 0) + 1)
+    return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  }, [rows])
+  const totalClase = useMemo(() => porClase.reduce((s, c) => s + c.value, 0), [porClase])
+
+  const porEntidad = useMemo(() => metricasPor(rows, (r) => r.entidad_norm || SIN_DATO, 'incap'), [rows])
+  const porDx = useMemo(() => metricasPor(rows, (r) => norm(r.descripcion_dx), 'incap').slice(0, 8), [rows])
+  const diasPorCargo = useMemo(() => metricasPor(rows, (r) => norm(r.cargo), 'dias').slice(0, 8), [rows])
+  const diasPorProceso = useMemo(() => metricasPor(rows, (r) => norm(r.proceso), 'dias').slice(0, 8), [rows])
+  const diasPorUnidad = useMemo(() => metricasPor(rows, (r) => norm(r.unidad_negocio), 'dias').slice(0, 8), [rows])
 
   const porDuracion = useMemo(() => {
     const m = new Map<number, number>()
@@ -116,10 +130,6 @@ export default function IncapacidadesGraficos({
     }
     return [...m.entries()].sort((a, b) => a[0] - b[0]).map(([d, value]) => ({ name: String(d), value }))
   }, [rows])
-
-  const diasPorCargo = useMemo(() => sumaDiasPor(rows, (r) => norm(r.cargo)).slice(0, 8), [rows])
-  const diasPorProceso = useMemo(() => sumaDiasPor(rows, (r) => norm(r.proceso)).slice(0, 8), [rows])
-  const diasPorUnidad = useMemo(() => sumaDiasPor(rows, (r) => norm(r.unidad_negocio)).slice(0, 8), [rows])
 
   const carteraEstado = useMemo(() => {
     const m = new Map<string, number>()
@@ -161,7 +171,7 @@ export default function IncapacidadesGraficos({
     for (const r of rows) totals.set(accessor(r), (totals.get(accessor(r)) ?? 0) + 1)
     const top = [...totals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([v]) => v)
     const topSet = new Set(top)
-    const grid = new Map<string, Map<string, number>>() // periodo -> label -> count
+    const grid = new Map<string, Map<string, number>>()
     const periodos = new Set<string>()
     let hayOtros = false
     for (const r of rows) {
@@ -176,7 +186,7 @@ export default function IncapacidadesGraficos({
       g.set(v, (g.get(v) ?? 0) + 1)
       grid.set(p, g)
     }
-    // Claves sintéticas (s0, s1…): evitan que etiquetas con "." o "," rompan el dataKey.
+    // Claves sintéticas: evitan que etiquetas con "." o "," rompan el dataKey.
     const labels = hayOtros ? [...top, 'Otros'] : top
     const series = labels.map((label, i) => ({ key: `s${i}`, label }))
     const data = [...periodos].sort().map((p) => {
@@ -199,7 +209,7 @@ export default function IncapacidadesGraficos({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
                 <XAxis dataKey="mesLabel" tick={tickX} axisLine={false} tickLine={false} />
                 <YAxis tick={tickX} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tooltipStyle} />
+                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="incapacidades" name="Incapacidades" fill={AZUL} radius={[4, 4, 0, 0]} maxBarSize={48} />
                 <Line type="monotone" dataKey="dias" name="Días" stroke={NARANJA} strokeWidth={2} dot={{ r: 3, fill: NARANJA }} />
@@ -215,7 +225,14 @@ export default function IncapacidadesGraficos({
                     <Cell key={i} fill={PALETA[i % PALETA.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v, n) => [`${v} incapacidad(es)`, n]} contentStyle={tooltipStyle} />
+                <Tooltip
+                  content={(p: TooltipProps<number, string>) => {
+                    const d = p.payload?.[0]?.payload as { name: string; value: number } | undefined
+                    if (!p.active || !d) return null
+                    const pct = totalClase > 0 ? Math.round((d.value / totalClase) * 100) : 0
+                    return <TipBox title={d.name}>{d.value} incap. ({pct}%)</TipBox>
+                  }}
+                />
                 <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </Alto>
@@ -232,28 +249,39 @@ export default function IncapacidadesGraficos({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
                 <XAxis dataKey="name" tick={tickX} axisLine={false} tickLine={false} />
                 <YAxis tick={tickX} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tooltipStyle} formatter={(v) => [`${v} incapacidad(es)`, 'Cantidad']} labelFormatter={(l) => `${l} día(s)`} />
+                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tipStyle} formatter={(v) => [`${v} incapacidad(es)`, 'Cantidad']} labelFormatter={(l) => `${l} día(s)`} />
                 <Bar dataKey="value" fill={AZUL} radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </Alto>
           </Panel>
 
           <Panel titulo="Ausentismo por cargo" nota="top · días perdidos">
-            <BarrasH data={diasPorCargo} color={AZUL} />
+            <BarrasH data={diasPorCargo} color={AZUL} metric="dias" />
           </Panel>
 
-          <Panel titulo="Diagnósticos más representativos" nota="top · frecuencia">
-            <BarrasH data={porDx} color="#2563EB" />
+          <Panel titulo="Diagnósticos más representativos" nota="top · frecuencia (incap · días)">
+            <BarrasH data={porDx} color="#2563EB" metric="incap" />
           </Panel>
 
-          <Panel titulo="Por entidad" nota="incapacidades">
+          <Panel titulo="Por entidad" nota="incapacidades · valor">
             <Alto>
               <BarChart data={porEntidad} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
                 <XAxis dataKey="name" tick={{ ...tickX, fontSize: 10 }} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
                 <YAxis tick={tickX} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tooltipStyle} formatter={(v) => [`${v} incapacidad(es)`, 'Cantidad']} />
-                <Bar dataKey="value" fill={TEAL} radius={[4, 4, 0, 0]} maxBarSize={44} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(0,54,156,0.04)' }}
+                  content={(p: TooltipProps<number, string>) => {
+                    const d = p.payload?.[0]?.payload as Cat | undefined
+                    if (!p.active || !d) return null
+                    return (
+                      <TipBox title={d.name}>
+                        {d.incap} incap. · {fmtCOP(d.valor)}
+                      </TipBox>
+                    )
+                  }}
+                />
+                <Bar dataKey="incap" fill={TEAL} radius={[4, 4, 0, 0]} maxBarSize={44} />
               </BarChart>
             </Alto>
           </Panel>
@@ -263,11 +291,11 @@ export default function IncapacidadesGraficos({
       {/* ── Ausentismo por área ── */}
       <Seccion titulo="Ausentismo por área">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Panel titulo="Por proceso" nota="días perdidos">
-            <BarrasH data={diasPorProceso} color={AZUL} />
+          <Panel titulo="Por proceso" nota="días perdidos (incap · días)">
+            <BarrasH data={diasPorProceso} color={AZUL} metric="dias" />
           </Panel>
-          <Panel titulo="Por unidad de negocio" nota="días perdidos">
-            <BarrasH data={diasPorUnidad} color="#1E3A8A" />
+          <Panel titulo="Por unidad de negocio" nota="días perdidos (incap · días)">
+            <BarrasH data={diasPorUnidad} color="#1E3A8A" metric="dias" />
           </Panel>
         </div>
       </Seccion>
@@ -296,7 +324,7 @@ export default function IncapacidadesGraficos({
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
               <XAxis dataKey="periodo" tick={tickX} axisLine={false} tickLine={false} />
               <YAxis tick={tickX} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {tendencia.series.map((s, i) => (
                 <Line key={s.key} type="monotone" dataKey={s.key} name={trunc(s.label, 18)} stroke={PALETA[i % PALETA.length]} strokeWidth={2} dot={{ r: 2 }} />
@@ -315,7 +343,7 @@ export default function IncapacidadesGraficos({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
                 <XAxis dataKey="name" tick={{ ...tickX, fontSize: 10 }} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
                 <YAxis tick={tickX} axisLine={false} tickLine={false} tickFormatter={(v) => fmtCosto(Number(v))} width={64} />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tooltipStyle} formatter={(v) => [fmtCosto(Number(v)), 'Pendiente']} />
+                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tipStyle} formatter={(v) => [fmtCOP(Number(v)), 'Pendiente']} />
                 <Bar dataKey="value" fill={NARANJA} radius={[4, 4, 0, 0]} maxBarSize={44} />
               </BarChart>
             </Alto>
@@ -331,7 +359,7 @@ export default function IncapacidadesGraficos({
                     <span className="truncate text-gray-700" title={d.entidad}>
                       {d.entidad}
                     </span>
-                    <span className="shrink-0 font-semibold text-gray-900">{fmtCosto(d.valor)}</span>
+                    <span className="shrink-0 font-semibold text-gray-900">{fmtCOP(d.valor)}</span>
                   </li>
                 ))}
               </ul>
@@ -374,20 +402,43 @@ export default function IncapacidadesGraficos({
   )
 }
 
-// ── Helpers de agregación ──────────────────────────────────────────
-function cuentaPor(rows: Row[], key: (r: Row) => string) {
-  const m = new Map<string, number>()
-  for (const r of rows) m.set(key(r), (m.get(key(r)) ?? 0) + 1)
-  return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+// ── Agregación por categoría con las 3 métricas ────────────────────
+function metricasPor(rows: Row[], key: (r: Row) => string, sortBy: 'dias' | 'incap'): Cat[] {
+  const m = new Map<string, Cat>()
+  for (const r of rows) {
+    const k = key(r)
+    const c = m.get(k) ?? { name: k, incap: 0, dias: 0, valor: 0 }
+    c.incap += 1
+    c.dias += num(r.nro_dias)
+    c.valor += num(r.total_incapacidad)
+    m.set(k, c)
+  }
+  return [...m.values()].sort((a, b) => b[sortBy] - a[sortBy])
 }
-function sumaDiasPor(rows: Row[], key: (r: Row) => string) {
-  const m = new Map<string, number>()
-  for (const r of rows) m.set(key(r), (m.get(key(r)) ?? 0) + num(r.nro_dias))
-  return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+
+// ── Tooltip enriquecido reutilizable ───────────────────────────────
+function TipBox({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
+      <p className="mb-0.5 font-semibold text-gray-900">{title}</p>
+      <p className="text-gray-600">{children}</p>
+    </div>
+  )
+}
+
+const CatTip = ({ active, payload }: TooltipProps<number, string>) => {
+  const d = payload?.[0]?.payload as Cat | undefined
+  if (!active || !d) return null
+  return (
+    <TipBox title={d.name}>
+      {d.incap} incap. · {d.dias} días
+    </TipBox>
+  )
 }
 
 // ── UI helpers ─────────────────────────────────────────────────────
 const tickX = { fontSize: 12, fill: '#6b7280' } as const
+const tipStyle = { borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 } as const
 
 function Alto({ children, h = 'h-72' }: { children: ReactNode; h?: string }) {
   return (
@@ -399,7 +450,15 @@ function Alto({ children, h = 'h-72' }: { children: ReactNode; h?: string }) {
   )
 }
 
-function BarrasH({ data, color }: { data: { name: string; value: number }[]; color: string }) {
+function BarrasH({
+  data,
+  color,
+  metric,
+}: {
+  data: Cat[]
+  color: string
+  metric: 'dias' | 'incap'
+}) {
   return (
     <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
@@ -415,8 +474,8 @@ function BarrasH({ data, color }: { data: { name: string; value: number }[]; col
             tickLine={false}
             tickFormatter={(v: string) => trunc(v, 22)}
           />
-          <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tooltipStyle} />
-          <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]} maxBarSize={22} />
+          <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} content={CatTip} />
+          <Bar dataKey={metric} fill={color} radius={[0, 4, 4, 0]} maxBarSize={22} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -458,9 +517,5 @@ function Panel({
 }
 
 function Vacio({ texto }: { texto: string }) {
-  return (
-    <div className="flex h-64 items-center justify-center text-center text-sm text-gray-400">
-      {texto}
-    </div>
-  )
+  return <div className="flex h-64 items-center justify-center text-center text-sm text-gray-400">{texto}</div>
 }
