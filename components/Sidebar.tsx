@@ -30,7 +30,6 @@ const navItems = [
   { href: '/incapacidades', label: 'Incapacidades', icon: Stethoscope },
   { href: '/recaudo', label: 'Recaudo', icon: Coins },
 ]
-]
 
 export default function Sidebar() {
   const pathname = usePathname()
