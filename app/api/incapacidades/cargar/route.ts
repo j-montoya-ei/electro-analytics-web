@@ -83,8 +83,8 @@ const CAMPOS_NUMERO: Campo[] = [
 
 // Fecha → 'YYYY-MM-DD'. Con cellDates:true los valores de fecha llegan como
 // Date en UTC medianoche. Si viniera texto 'DD-MM-YYYY' se reordena; si ya
-// viene 'YYYY-MM-DD' se respeta; cualquier otro texto se pasa tal cual y el
-// RPC intentará castear.
+// viene 'YYYY-MM-DD' se respeta. Cualquier otro texto (p.ej. el marcador
+// '-' de "sin dato" del reporte) → null, para no romper el cast ::date.
 const fmtFecha = (v: unknown): string | null => {
   if (v == null) return null
   if (v instanceof Date) return v.toISOString().slice(0, 10)
@@ -93,17 +93,19 @@ const fmtFecha = (v: unknown): string | null => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
   const m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/)
   if (m) return `${m[3]}-${m[2]}-${m[1]}`
-  return s
+  return null
 }
 
 // Número → texto numérico limpio. Con raw:true las celdas numéricas llegan
-// como number → String() no introduce separador de miles. El texto se pasa
-// sin alterar (el RPC castea y, si falla, el error sube a la respuesta).
+// como number → String() no introduce separador de miles. Un texto solo se
+// acepta si es un número válido (con signo/decimales); cualquier otra cosa
+// (p.ej. el marcador '-' de "sin dato") → null, para no romper el cast.
 const num = (v: unknown): string | null => {
   if (v == null) return null
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null
   const s = String(v).trim()
-  return s || null
+  if (!s) return null
+  return /^-?\d+(\.\d+)?$/.test(s) ? s : null
 }
 
 // Texto → trim, null si queda vacío.
