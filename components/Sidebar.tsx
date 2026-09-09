@@ -14,6 +14,7 @@ import {
   Clock,
   Timer,
   Fingerprint,
+  Stethoscope,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/llegadas-tarde', label: 'Llegadas tarde', icon: Clock },
   { href: '/horas-extras', label: 'Horas extras', icon: Timer },
   { href: '/marcas-fallidas', label: 'Marcas fallidas', icon: Fingerprint },
+  { href: '/incapacidades', label: 'Incapacidades', icon: Stethoscope },
 ]
 
 export default function Sidebar() {
