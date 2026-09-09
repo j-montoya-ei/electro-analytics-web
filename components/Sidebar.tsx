@@ -28,6 +28,8 @@ const navItems = [
   { href: '/horas-extras', label: 'Horas extras', icon: Timer },
   { href: '/marcas-fallidas', label: 'Marcas fallidas', icon: Fingerprint },
   { href: '/incapacidades', label: 'Incapacidades', icon: Stethoscope },
+  { href: '/recaudo', label: 'Recaudo', icon: Coins },
+]
 ]
 
 export default function Sidebar() {
