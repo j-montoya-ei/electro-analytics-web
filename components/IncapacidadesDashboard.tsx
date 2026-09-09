@@ -14,6 +14,7 @@
 import { useMemo, useState } from 'react'
 import KpiCard from '@/components/KpiCard'
 import IncapacidadesGraficos from '@/components/IncapacidadesGraficos'
+import IncapacidadesPersonas from '@/components/IncapacidadesPersonas'
 import {
   Stethoscope,
   CalendarDays,
@@ -44,18 +45,32 @@ const fmtCosto = (n: number): string =>
 
 export type IncapacidadRow = {
   dni: string
+  nombre: string | null
   mes: string | null
   mes_num: number | null
+  periodo: string | null
+  anio: number | null
   clase: string | null
   cargo: string | null
+  proceso: string | null
+  unidad_negocio: string | null
+  descripcion_dx: string | null
   entidad_norm: string
+  estado: string | null
   nro_dias: number | string | null
   total_incapacidad: number | string | null
+  valor_pendiente_cobrar: number | string | null
   radicada: boolean
   radicada_a_tiempo: boolean
 }
 
-export default function IncapacidadesDashboard({ rows }: { rows: IncapacidadRow[] }) {
+export default function IncapacidadesDashboard({
+  rows,
+  plantilla,
+}: {
+  rows: IncapacidadRow[]
+  plantilla: number | null
+}) {
   const [mes, setMes] = useState('')
   const [clase, setClase] = useState('')
   const [cargo, setCargo] = useState('')
@@ -156,7 +171,10 @@ export default function IncapacidadesDashboard({ rows }: { rows: IncapacidadRow[
           No hay incapacidades con los filtros seleccionados.
         </div>
       ) : (
-        <IncapacidadesGraficos rows={filtradas} />
+        <>
+          <IncapacidadesGraficos rows={filtradas} plantilla={plantilla} />
+          <IncapacidadesPersonas rows={filtradas} />
+        </>
       )}
     </div>
   )
