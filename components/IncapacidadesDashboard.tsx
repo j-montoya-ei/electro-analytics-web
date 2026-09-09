@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from 'react'
 import KpiCard from '@/components/KpiCard'
+import IncapacidadesGraficos from '@/components/IncapacidadesGraficos'
 import {
   Stethoscope,
   CalendarDays,
@@ -150,13 +151,13 @@ export default function IncapacidadesDashboard({ rows }: { rows: IncapacidadRow[
         <KpiCard label="Costo total" value={fmtCosto(kpis.costo)} tone="green" icon={<Banknote className="h-5 w-5" />} />
       </div>
 
-      {filtradas.length === 0 && (
+      {filtradas.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
           No hay incapacidades con los filtros seleccionados.
         </div>
+      ) : (
+        <IncapacidadesGraficos rows={filtradas} />
       )}
-
-      {/* Gráficos: entregables 3–5 */}
     </div>
   )
 }
