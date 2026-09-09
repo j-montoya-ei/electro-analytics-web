@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 // Página Incapacidades
-// Server Component: jala vw_incapacidades y delega el tablero
-// (filtros + KPIs + gráficos) al cliente IncapacidadesDashboard.
-// Mantiene el botón de carga en el encabezado.
+// Server Component: jala vw_incapacidades (+ conteo de plantilla
+// activa para la proporción por año) y delega el tablero al
+// cliente IncapacidadesDashboard. Mantiene el botón de carga.
 //
 // Ubicación: app/(protected)/incapacidades/page.tsx
 // ═══════════════════════════════════════════════════════════
@@ -18,13 +18,18 @@ export const dynamic = 'force-dynamic'
 export default async function IncapacidadesPage() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('vw_incapacidades')
-    .select(
-      'dni,mes,mes_num,clase,cargo,entidad_norm,nro_dias,total_incapacidad,radicada,radicada_a_tiempo',
-    )
-    .order('mes_num', { ascending: true })
-    .limit(5000)
+  const [incap, planta] = await Promise.all([
+    supabase
+      .from('vw_incapacidades')
+      .select('*')
+      .order('mes_num', { ascending: true })
+      .limit(5000),
+    // Plantilla activa para la proporción por año (si falla, queda null).
+    supabase.from('vw_caracterizacion').select('*', { count: 'exact', head: true }),
+  ])
+
+  const rows = (incap.data ?? []) as IncapacidadRow[]
+  const plantilla = planta.count ?? null
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -35,21 +40,21 @@ export default async function IncapacidadesPage() {
           <p className="text-sm text-gray-600 mt-1">Electroingeniería S.A.S.</p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
             Ausentismo por incapacidad médica: volumen, duración, diagnósticos,
-            entidades y costo. Usa los filtros para segmentar el análisis.
+            entidades, áreas y costo. Usa los filtros para segmentar el análisis.
           </p>
         </div>
         <CargarIncapacidadesBoton />
       </div>
 
-      {error ? (
+      {incap.error ? (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-sm font-medium text-red-800">
             No se pudo cargar el módulo de incapacidades
           </p>
-          <p className="text-sm text-red-600 mt-1">{error.message}</p>
+          <p className="text-sm text-red-600 mt-1">{incap.error.message}</p>
         </div>
       ) : (
-        <IncapacidadesDashboard rows={(data ?? []) as IncapacidadRow[]} />
+        <IncapacidadesDashboard rows={rows} plantilla={plantilla} />
       )}
     </div>
   )
