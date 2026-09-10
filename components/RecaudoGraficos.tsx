@@ -1,12 +1,11 @@
 // ═══════════════════════════════════════════════════════════
 // RecaudoGraficos (client component)
-// Módulo RECAUDO — tabla (a) causado_mensual. Grafica lo ÚNICO
-// disponible hoy: causado vs. ingreso reconocido por EPS, por mes
-// y por año. Recaudo mes a mes y cartera dependen de las tablas
-// (b) recaudo_pagos y (c) cartera_eps, aún no cargadas.
-//
-// Tooltips enriquecidos (causado · ingreso · Δ). Agrega en memoria;
-// la lógica de negocio vive en vw_causado_mensual.
+// Módulo RECAUDO. Paneles:
+//   1. Recaudo vs. causado por mes de generación (+ línea % recaudo)
+//   2. Recaudo mes a mes (por mes de pago) — flujo de caja
+//   3. Causado vs. ingreso reconocido por EPS (por mes)
+// Datos desde vw_recaudo_mensual y vw_recaudo_por_mes_pago. Toda la
+// lógica (sumas, %, saldo) vive en esas vistas; aquí solo se presenta.
 //
 // Ubicación: components/RecaudoGraficos.tsx
 // ═══════════════════════════════════════════════════════════
@@ -16,8 +15,10 @@
 import { useMemo, type ReactNode, type ReactElement } from 'react'
 import {
   ResponsiveContainer,
+  ComposedChart,
   BarChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -26,142 +27,190 @@ import {
 } from 'recharts'
 import type { TooltipProps } from 'recharts'
 
-// ── Helpers de formato (mismo criterio que el resto del proyecto) ──
+// ── Formato (mismo criterio que el resto del proyecto) ──
 const num = (v: number | string | null | undefined) => {
   const n = typeof v === 'number' ? v : v == null ? 0 : Number(v)
   return Number.isFinite(n) ? n : 0
 }
-// Compacto para ejes; completo para tooltips (ej. $2.240.262).
 const fmtCosto = (n: number) =>
   n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${n.toFixed(0)}`
 const fmtCOP = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
+const fmtPct = (frac: number) => `${(frac * 100).toFixed(1)}%`
 
 const AZUL = '#00369C'
 const NARANJA = '#EA8C00'
+const VERDE = '#0F9D58'
 
 const MES_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-// '2023-11' → 'nov 23'
-const mesLabel = (periodo: string) => {
+const mesLabel = (periodo?: string) => {
   const [y, m] = (periodo ?? '').split('-')
-  const i = Number(m) - 1
-  return `${MES_ABBR[i] ?? m} ${(y ?? '').slice(2)}`
+  return `${MES_ABBR[Number(m) - 1] ?? m} ${(y ?? '').slice(2)}`
 }
 
-export type CausadoRow = {
+export type RecaudoMensualRow = {
   mes_generacion: string
   anio: number | string | null
-  mes_num: number | string | null
   periodo: string
   valor_causado: number | string | null
   valor_ingreso: number | string | null
+  total_recaudado: number | string | null
+  pct_recaudo: number | string | null
+  saldo_por_recaudar: number | string | null
+}
+export type RecaudoPagoRow = {
+  mes_pago: string
+  periodo: string
+  total_recaudado: number | string | null
 }
 
-export default function RecaudoGraficos({ rows }: { rows: CausadoRow[] }) {
-  const porMes = useMemo(
+export default function RecaudoGraficos({
+  mensual,
+  porPago,
+}: {
+  mensual: RecaudoMensualRow[]
+  porPago: RecaudoPagoRow[]
+}) {
+  const porGen = useMemo(
     () =>
-      [...rows]
+      [...mensual]
         .sort((a, b) => (a.mes_generacion < b.mes_generacion ? -1 : a.mes_generacion > b.mes_generacion ? 1 : 0))
         .map((r) => ({
           label: mesLabel(r.periodo),
           causado: num(r.valor_causado),
           ingreso: num(r.valor_ingreso),
+          recaudado: num(r.total_recaudado),
+          saldo: num(r.saldo_por_recaudar),
+          pct: num(r.pct_recaudo),
         })),
-    [rows],
+    [mensual],
   )
 
-  const porAnio = useMemo(() => {
-    const m = new Map<number, { causado: number; ingreso: number }>()
-    for (const r of rows) {
-      const a = Number(r.anio)
-      if (!Number.isFinite(a)) continue
-      const cur = m.get(a) ?? { causado: 0, ingreso: 0 }
-      cur.causado += num(r.valor_causado)
-      cur.ingreso += num(r.valor_ingreso)
-      m.set(a, cur)
-    }
-    return [...m.entries()].sort((x, y) => x[0] - y[0]).map(([anio, v]) => ({ label: String(anio), ...v }))
-  }, [rows])
+  const flujo = useMemo(
+    () =>
+      [...porPago]
+        .sort((a, b) => (a.mes_pago < b.mes_pago ? -1 : a.mes_pago > b.mes_pago ? 1 : 0))
+        .map((r) => ({ label: mesLabel(r.periodo), recaudado: num(r.total_recaudado) })),
+    [porPago],
+  )
 
-  // Aviso claro sobre por qué ingreso puede superar al causado.
-  const totalCausado = useMemo(() => porAnio.reduce((s, r) => s + r.causado, 0), [porAnio])
-  const totalIngreso = useMemo(() => porAnio.reduce((s, r) => s + r.ingreso, 0), [porAnio])
+  const totalCausado = useMemo(() => porGen.reduce((s, r) => s + r.causado, 0), [porGen])
+  const totalRecaudado = useMemo(() => porGen.reduce((s, r) => s + r.recaudado, 0), [porGen])
+  const totalIngreso = useMemo(() => porGen.reduce((s, r) => s + r.ingreso, 0), [porGen])
 
-  const thin = Math.max(0, Math.ceil(porMes.length / 12) - 1)
+  const thinGen = Math.max(0, Math.ceil(porGen.length / 12) - 1)
+  const thinFlujo = Math.max(0, Math.ceil(flujo.length / 12) - 1)
 
   return (
     <div className="space-y-8">
-      <Seccion titulo="Causado vs. ingreso reconocido por EPS">
-        <Panel
-          titulo="Por mes"
-          nota="valor mensual (COP) · barra = causado / ingreso reconocido"
-        >
+      {/* ── Recaudo ── */}
+      <Seccion titulo="Recaudo">
+        <Panel titulo="Recaudo vs. causado por mes de generación" nota="barras = COP · línea = % recaudo de la cohorte">
           <Alto h="h-80">
-            <BarChart data={porMes} margin={{ top: 8, right: 12, bottom: 24, left: 4 }}>
+            <ComposedChart data={porGen} margin={{ top: 8, right: 16, bottom: 24, left: 4 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
               <XAxis
                 dataKey="label"
                 tick={tickX}
                 axisLine={false}
                 tickLine={false}
-                interval={thin}
+                interval={thinGen}
                 angle={-35}
                 textAnchor="end"
                 height={48}
               />
               <YAxis
+                yAxisId="cop"
                 tick={tickX}
                 axisLine={false}
                 tickLine={false}
                 width={56}
                 tickFormatter={(v) => fmtCosto(Number(v))}
               />
-              <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} content={ValorTip} />
+              <YAxis
+                yAxisId="pct"
+                orientation="right"
+                tick={tickX}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+                domain={[0, 'auto']}
+                tickFormatter={(v) => fmtPct(Number(v))}
+              />
+              <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} content={GenTip} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="causado" name="Causado" fill={AZUL} radius={[3, 3, 0, 0]} maxBarSize={22} />
-              <Bar dataKey="ingreso" name="Ingreso reconocido EPS" fill={NARANJA} radius={[3, 3, 0, 0]} maxBarSize={22} />
-            </BarChart>
+              <Bar yAxisId="cop" dataKey="causado" name="Causado" fill={AZUL} radius={[3, 3, 0, 0]} maxBarSize={22} />
+              <Bar yAxisId="cop" dataKey="recaudado" name="Recaudado" fill={VERDE} radius={[3, 3, 0, 0]} maxBarSize={22} />
+              <Line yAxisId="pct" type="monotone" dataKey="pct" name="% recaudo" stroke={NARANJA} strokeWidth={2} dot={{ r: 2 }} />
+            </ComposedChart>
           </Alto>
         </Panel>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Panel titulo="Por año" nota="acumulado anual (COP)">
-            <Alto>
-              <BarChart data={porAnio} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
-                <XAxis dataKey="label" tick={tickX} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={tickX}
-                  axisLine={false}
-                  tickLine={false}
-                  width={56}
-                  tickFormatter={(v) => fmtCosto(Number(v))}
-                />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} content={ValorTip} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="causado" name="Causado" fill={AZUL} radius={[4, 4, 0, 0]} maxBarSize={48} />
-                <Bar dataKey="ingreso" name="Ingreso reconocido EPS" fill={NARANJA} radius={[4, 4, 0, 0]} maxBarSize={48} />
-              </BarChart>
-            </Alto>
-          </Panel>
+        <Panel titulo="Recaudo mes a mes" nota="por mes de pago — flujo de caja (COP)">
+          <Alto>
+            <BarChart data={flujo} margin={{ top: 8, right: 12, bottom: 24, left: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
+              <XAxis
+                dataKey="label"
+                tick={tickX}
+                axisLine={false}
+                tickLine={false}
+                interval={thinFlujo}
+                angle={-35}
+                textAnchor="end"
+                height={48}
+              />
+              <YAxis tick={tickX} axisLine={false} tickLine={false} width={56} tickFormatter={(v) => fmtCosto(Number(v))} />
+              <Tooltip cursor={{ fill: 'rgba(15,157,88,0.06)' }} content={FlujoTip} />
+              <Bar dataKey="recaudado" name="Recaudado" fill={VERDE} radius={[3, 3, 0, 0]} maxBarSize={28} />
+            </BarChart>
+          </Alto>
+        </Panel>
+      </Seccion>
+
+      {/* ── Causado vs. ingreso reconocido ── */}
+      <Seccion titulo="Causado vs. ingreso reconocido por EPS">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Panel titulo="Por mes" nota="valor mensual (COP)">
+              <Alto>
+                <BarChart data={porGen} margin={{ top: 8, right: 12, bottom: 24, left: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
+                  <XAxis
+                    dataKey="label"
+                    tick={tickX}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={thinGen}
+                    angle={-35}
+                    textAnchor="end"
+                    height={48}
+                  />
+                  <YAxis tick={tickX} axisLine={false} tickLine={false} width={56} tickFormatter={(v) => fmtCosto(Number(v))} />
+                  <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} content={CausadoIngresoTip} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="causado" name="Causado" fill={AZUL} radius={[3, 3, 0, 0]} maxBarSize={22} />
+                  <Bar dataKey="ingreso" name="Ingreso reconocido EPS" fill={NARANJA} radius={[3, 3, 0, 0]} maxBarSize={22} />
+                </BarChart>
+              </Alto>
+            </Panel>
+          </div>
 
           <Panel titulo="Lectura" nota="qué muestran estos paneles">
             <div className="space-y-3 text-sm leading-6 text-gray-600">
               <p>
-                <span className="font-semibold text-gray-900">Causado</span>: suma a cobrar de las
-                incapacidades generadas cada mes.{' '}
-                <span className="font-semibold text-gray-900">Ingreso reconocido</span>: valor que la
-                EPS acepta en su factura (captura manual). No es lo recaudado.
+                <span className="font-semibold text-gray-900">Causado</span>: a cobrar.{' '}
+                <span className="font-semibold text-gray-900">Recaudado</span>: lo efectivamente
+                cobrado.{' '}
+                <span className="font-semibold text-gray-900">Ingreso reconocido</span>: lo que la
+                EPS acepta en factura (no es recaudo).
               </p>
               <p>
-                El ingreso reconocido puede superar al causado (histórico:{' '}
-                {fmtCOP(totalIngreso)} vs. {fmtCOP(totalCausado)}) por reliquidaciones y ajustes de
-                la EPS posteriores al cálculo inicial.
+                Recaudado histórico {fmtCOP(totalRecaudado)} de {fmtCOP(totalCausado)} causado. El
+                ingreso reconocido ({fmtCOP(totalIngreso)}) puede superar al causado por
+                reliquidaciones de la EPS.
               </p>
-              <p className="text-gray-500">
-                El recaudo mes a mes, la cartera por EPS y el % de recuperación llegan cuando se
-                carguen las tablas de pagos y cartera.
-              </p>
+              <p className="text-gray-500">La cartera por EPS llega cuando se cargue la sección de cartera.</p>
             </div>
           </Panel>
         </div>
@@ -170,33 +219,67 @@ export default function RecaudoGraficos({ rows }: { rows: CausadoRow[] }) {
   )
 }
 
-// ── Tooltip enriquecido: causado · ingreso · Δ ─────────────────────
-const ValorTip = ({ active, payload, label }: TooltipProps<number, string>) => {
+// ── Tooltips enriquecidos ──────────────────────────────────────────
+function TipShell({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
+      <p className="mb-1 font-semibold text-gray-900">{title}</p>
+      {children}
+    </div>
+  )
+}
+function Fila({ k, v, tone }: { k: string; v: string; tone?: string }) {
+  return (
+    <p className="flex items-center justify-between gap-4 text-gray-600">
+      <span>{k}</span>
+      <span className={`font-semibold ${tone ?? 'text-gray-900'}`}>{v}</span>
+    </p>
+  )
+}
+
+const GenTip = ({ active, payload, label }: TooltipProps<number, string>) => {
+  const d = payload?.[0]?.payload as
+    | { causado: number; recaudado: number; saldo: number; pct: number }
+    | undefined
+  if (!active || !d) return null
+  return (
+    <TipShell title={label as string}>
+      <Fila k="Causado" v={fmtCOP(d.causado)} />
+      <Fila k="Recaudado" v={fmtCOP(d.recaudado)} tone="text-emerald-600" />
+      <Fila k="Saldo" v={fmtCOP(d.saldo)} tone="text-red-600" />
+      <div className="mt-1 border-t border-gray-100 pt-1">
+        <Fila k="% recaudo" v={fmtPct(d.pct)} tone="text-[#EA8C00]" />
+      </div>
+    </TipShell>
+  )
+}
+
+const FlujoTip = ({ active, payload, label }: TooltipProps<number, string>) => {
+  const d = payload?.[0]?.payload as { recaudado: number } | undefined
+  if (!active || !d) return null
+  return (
+    <TipShell title={label as string}>
+      <Fila k="Recaudado" v={fmtCOP(d.recaudado)} tone="text-emerald-600" />
+    </TipShell>
+  )
+}
+
+const CausadoIngresoTip = ({ active, payload, label }: TooltipProps<number, string>) => {
   const d = payload?.[0]?.payload as { causado: number; ingreso: number } | undefined
   if (!active || !d) return null
   const dif = d.ingreso - d.causado
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
-      <p className="mb-1 font-semibold text-gray-900">{label}</p>
-      <p className="flex items-center justify-between gap-4 text-gray-600">
-        <span>Causado</span>
-        <span className="font-semibold text-gray-900">{fmtCOP(d.causado)}</span>
-      </p>
-      <p className="flex items-center justify-between gap-4 text-gray-600">
-        <span>Ingreso EPS</span>
-        <span className="font-semibold text-gray-900">{fmtCOP(d.ingreso)}</span>
-      </p>
-      <p className="mt-1 flex items-center justify-between gap-4 border-t border-gray-100 pt-1 text-gray-600">
-        <span>Δ ingreso − causado</span>
-        <span className={`font-semibold ${dif >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-          {fmtCOP(dif)}
-        </span>
-      </p>
-    </div>
+    <TipShell title={label as string}>
+      <Fila k="Causado" v={fmtCOP(d.causado)} />
+      <Fila k="Ingreso EPS" v={fmtCOP(d.ingreso)} />
+      <div className="mt-1 border-t border-gray-100 pt-1">
+        <Fila k="Δ ingreso − causado" v={fmtCOP(dif)} tone={dif >= 0 ? 'text-emerald-600' : 'text-red-600'} />
+      </div>
+    </TipShell>
   )
 }
 
-// ── UI helpers (mismos que el resto de tableros) ───────────────────
+// ── UI helpers ─────────────────────────────────────────────────────
 const tickX = { fontSize: 12, fill: '#6b7280' } as const
 
 function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {
