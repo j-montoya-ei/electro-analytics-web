@@ -1,20 +1,23 @@
 // ═══════════════════════════════════════════════════════════
-// Página Recaudo (parcial — tabla a: causado_mensual)
-// Server Component: jala vw_causado_mensual, calcula KPIs de
-// causado e ingreso reconocido por EPS y delega los gráficos al
-// cliente RecaudoGraficos. Mantiene el botón de carga.
+// Página Recaudo (tablas a + b: causado_mensual + recaudo_pagos)
+// Server Component: lee vw_recaudo_mensual (por generación) y
+// vw_recaudo_por_mes_pago (flujo), calcula KPIs de recaudo y delega
+// los gráficos al cliente RecaudoGraficos. Dos botones de carga.
 //
-// Recaudo mes a mes y cartera por EPS se agregan cuando se carguen
-// las tablas (b) recaudo_pagos y (c) cartera_eps.
+// La cartera por EPS se agrega cuando se cargue la tabla (c) cartera_eps.
 //
 // Ubicación: app/(protected)/recaudo/page.tsx
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
 import CargarCausadoMensualBoton from '@/components/CargarCausadoMensualBoton'
-import RecaudoGraficos, { type CausadoRow } from '@/components/RecaudoGraficos'
+import CargarRecaudoPagosBoton from '@/components/CargarRecaudoPagosBoton'
+import RecaudoGraficos, {
+  type RecaudoMensualRow,
+  type RecaudoPagoRow,
+} from '@/components/RecaudoGraficos'
 import KpiCard from '@/components/KpiCard'
-import { Coins, Landmark, CalendarRange, ArrowLeftRight } from 'lucide-react'
+import { Coins, Wallet, TrendingUp, Receipt } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,29 +27,24 @@ const nn = (v: number | string | null | undefined) => {
 }
 const fmtCOP = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
-
-const MES_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-const mesLabel = (periodo?: string) => {
-  const [y, m] = (periodo ?? '').split('-')
-  return `${MES_ABBR[Number(m) - 1] ?? m} ${(y ?? '').slice(2)}`
-}
+const fmtPct = (frac: number) => `${(frac * 100).toFixed(1)}%`
 
 export default async function RecaudoPage() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('vw_causado_mensual')
-    .select('*')
-    .order('mes_generacion', { ascending: true })
-    .limit(5000)
+  const [mensualRes, pagoRes] = await Promise.all([
+    supabase.from('vw_recaudo_mensual').select('*').order('mes_generacion', { ascending: true }).limit(5000),
+    supabase.from('vw_recaudo_por_mes_pago').select('*').order('mes_pago', { ascending: true }).limit(5000),
+  ])
 
-  const rows = (data ?? []) as CausadoRow[]
+  const error = mensualRes.error ?? pagoRes.error
+  const mensual = (mensualRes.data ?? []) as RecaudoMensualRow[]
+  const porPago = (pagoRes.data ?? []) as RecaudoPagoRow[]
 
-  const totalCausado = rows.reduce((s, r) => s + nn(r.valor_causado), 0)
-  const totalIngreso = rows.reduce((s, r) => s + nn(r.valor_ingreso), 0)
-  const meses = rows.length
-  const rango =
-    meses > 0 ? `${mesLabel(rows[0].periodo)} – ${mesLabel(rows[meses - 1].periodo)}` : '—'
+  const totalCausado = mensual.reduce((s, r) => s + nn(r.valor_causado), 0)
+  const totalRecaudado = mensual.reduce((s, r) => s + nn(r.total_recaudado), 0)
+  const saldo = totalCausado - totalRecaudado
+  const pctGlobal = totalCausado > 0 ? totalRecaudado / totalCausado : 0
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -56,13 +54,16 @@ export default async function RecaudoPage() {
           <h2 className="text-2xl font-bold text-gray-900">Recaudo</h2>
           <p className="text-sm text-gray-600 mt-1">Electroingeniería S.A.S.</p>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-            Seguimiento del recaudo de incapacidades ante las EPS. Esta vista muestra el valor{' '}
-            <span className="font-medium text-gray-700">causado</span> (a cobrar) y el{' '}
-            <span className="font-medium text-gray-700">ingreso reconocido</span> por la EPS, por
-            mes de generación.
+            Seguimiento del recaudo de incapacidades ante las EPS: valor{' '}
+            <span className="font-medium text-gray-700">causado</span> (a cobrar),{' '}
+            <span className="font-medium text-gray-700">recaudado</span> y % de recuperación, por
+            mes de generación y por mes de pago.
           </p>
         </div>
-        <CargarCausadoMensualBoton />
+        <div className="flex flex-col gap-2 sm:items-end">
+          <CargarCausadoMensualBoton />
+          <CargarRecaudoPagosBoton />
+        </div>
       </div>
 
       {error ? (
@@ -75,24 +76,27 @@ export default async function RecaudoPage() {
           {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard label="Total causado" value={fmtCOP(totalCausado)} tone="blue" icon={<Coins className="w-5 h-5" />} />
-            <KpiCard label="Ingreso reconocido EPS" value={fmtCOP(totalIngreso)} tone="green" icon={<Landmark className="w-5 h-5" />} />
-            <KpiCard label="Meses con datos" value={meses} tone="gray" icon={<CalendarRange className="w-5 h-5" />} />
-            <KpiCard label="Rango" value={rango} tone="yellow" icon={<ArrowLeftRight className="w-5 h-5" />} />
+            <KpiCard label="Total recaudado" value={fmtCOP(totalRecaudado)} tone="green" icon={<Wallet className="w-5 h-5" />} />
+            <KpiCard label="% recaudo global" value={fmtPct(pctGlobal)} tone="yellow" icon={<TrendingUp className="w-5 h-5" />} />
+            <KpiCard label="Saldo por recaudar" value={fmtCOP(saldo)} tone="gray" icon={<Receipt className="w-5 h-5" />} />
           </div>
 
           {/* Nota de alcance */}
           <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs leading-5 text-slate-600">
-            <span className="font-semibold text-[#092d6b]">Alcance actual:</span> causado e ingreso
-            reconocido por EPS (tabla de causado). El recaudo mes a mes, la cartera por EPS y el % de
-            recuperación se habilitan al cargar las tablas de pagos y cartera.
+            <span className="font-semibold text-[#092d6b]">Alcance actual:</span> causado, ingreso
+            reconocido y recaudo (por generación y por pago). La cartera por EPS se habilita al
+            cargar la sección de cartera del libro RECAUDO.
           </div>
 
-          {meses === 0 ? (
+          {mensual.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-              Aún no hay datos cargados. Usa <span className="font-medium text-gray-700">Cargar causado mensual</span> para subir el libro RECAUDO.
+              Aún no hay datos cargados. Usa{' '}
+              <span className="font-medium text-gray-700">Cargar causado mensual</span> y{' '}
+              <span className="font-medium text-gray-700">Cargar recaudo (pagos)</span> para subir el
+              libro RECAUDO.
             </div>
           ) : (
-            <RecaudoGraficos rows={rows} />
+            <RecaudoGraficos mensual={mensual} porPago={porPago} />
           )}
         </>
       )}
