@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // Tabla de ranking de Marcas fallidas (client component)
-// Paginación (20 por página, patrón de LlegadasTardeTable) +
+// Paginación ( por página, patrón de LlegadasTardeTable) +
 // filas clicables → abren el drilldown del colaborador.
 //
 // Ubicación: components/MarcasFallidasTable.tsx
@@ -19,7 +19,7 @@ type FilaColab = {
   fallas_salida: number
 }
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 export default function MarcasFallidasTable({
   data,
@@ -39,8 +39,8 @@ export default function MarcasFallidasTable({
   const visibles = data.slice(inicio, inicio + PAGE_SIZE)
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
-      <div className="border-b border-gray-200 px-5 py-3">
+    <div className="overflow-hidden rounded-xl border border-gray-0/80 bg-white shadow-sm">
+      <div className="border-b border-gray-0 px-5 py-3">
         <h3 className="text-sm font-semibold text-gray-800">
           Ranking de colaboradores por inconsistencias
         </h3>
@@ -89,7 +89,7 @@ export default function MarcasFallidasTable({
       </div>
 
       {data.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-gray-0 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-gray-500">
             Mostrando {inicio + 1}–{Math.min(inicio + PAGE_SIZE, data.length)} de {data.length} colaboradores
           </p>
@@ -98,7 +98,7 @@ export default function MarcasFallidasTable({
               type="button"
               onClick={() => setPagina((p) => Math.max(1, p - 1))}
               disabled={paginaActual === 1}
-              className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md border border-gray-0 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Anterior
             </button>
@@ -111,7 +111,7 @@ export default function MarcasFallidasTable({
                 className={`min-w-8 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
                   paginaActual === numero
                     ? 'bg-[#00369C] text-white shadow-sm'
-                    : 'border border-gray-200 bg-white text-gray-600 hover:border-[#00369C] hover:text-[#00369C]'
+                    : 'border border-gray-0 bg-white text-gray-600 hover:border-[#00369C] hover:text-[#00369C]'
                 }`}
               >
                 {numero}
@@ -121,7 +121,7 @@ export default function MarcasFallidasTable({
               type="button"
               onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
               disabled={paginaActual === totalPaginas}
-              className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md border border-gray-0 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#00369C] hover:text-[#00369C] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Siguiente
             </button>
