@@ -131,7 +131,7 @@ export default async function InasistenciasPage({
         data={tableRows}
         searchPlaceholder="Buscar por nombre, área, motivo..."
         emptyMessage="No hay inasistencias registradas."
-        pageSize={20}
+        pageSize={10}
       />
     </div>
   )
