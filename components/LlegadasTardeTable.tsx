@@ -35,7 +35,7 @@ type ColKey =
   | 'total_dias'
   | 'total_minutos'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 const TIPO: Record<ColKey, 'texto' | 'num'> = {
   nombre_completo: 'texto',
