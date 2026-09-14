@@ -96,7 +96,7 @@ export default function LlegadasTardeTable({
     // sea siempre veraz. (Cambio deliberado: antes exportaba el orden de la vista.)
     const filasExportadas = [...data]
       .sort((a, b) => b.total_minutos - a.total_minutos)
-      .slice(0, 20)
+      .slice(0, 10)
 
     const n = filasExportadas.length
     const NCOLS = 13
@@ -325,7 +325,7 @@ export default function LlegadasTardeTable({
           disabled={filas.length === 0}
           className="shrink-0 rounded-md bg-[#087F5B] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#06684B] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Exportar Excel (20)
+          Exportar Excel (10)
         </button>
       </div>
 
