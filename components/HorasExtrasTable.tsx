@@ -42,7 +42,7 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
 
 // Formatea horas: 1 decimal, "—" si es 0 (para no saturar la tabla de ceros)
 const fmtH = (h: number) => (h > 0 ? (Math.round(h * 10) / 10).toString() : '—')
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 export default function HorasExtrasTable({
   data,
