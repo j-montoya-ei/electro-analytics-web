@@ -43,7 +43,7 @@ export default async function EmpleadosPage() {
       <DataTable
         data={empleados ?? []}
         searchPlaceholder="Buscar por nombre, cargo, área..."
-        pageSize={20}
+        pageSize={10}
         emptyMessage={
           <>
             No hay empleados para mostrar. Verifica que la tabla{' '}
