@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import DataTable from '@/components/DataTable'
 import KpiCard from '@/components/KpiCard'
 import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
-import { UserX, Users, CalendarX, FileWarning } from 'lucide-react'
+import { UserX, Users, CalendarX, FileWarning, Plane } from 'lucide-react'
 
 function bogotaNow() {
   const now = new Date()
@@ -87,6 +87,7 @@ export default async function InasistenciasPage({
   const empleadosAfectados = new Set(rows.map((r) => r.dni)).size
   const codigoL = rows.filter((r) => r.motivo === 'L').length
   const codigoP = rows.filter((r) => r.motivo === 'P').length
+  const codigoV = rows.filter((r) => r.motivo === 'V').length
 
   const tableRows = rows.map((r) => ({
     nombre_completo: r.nombre_completo,
@@ -111,18 +112,19 @@ export default async function InasistenciasPage({
 
       <LlegadasTardeFiltro desde={desde} hasta={hasta} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard label="Registros de inasistencia" value={totalRegistros} tone="red" icon={<UserX className="w-5 h-5" />} />
         <KpiCard label="Personas con inasistencia" value={empleadosAfectados} tone="blue" icon={<Users className="w-5 h-5" />} />
         <KpiCard label="Inasistencias código L" value={codigoL} tone="yellow" icon={<CalendarX className="w-5 h-5" />} />
         <KpiCard label="Inasistencias código P" value={codigoP} tone="gray" icon={<FileWarning className="w-5 h-5" />} />
+        <KpiCard label="Inasistencias código V" value={codigoV} tone="green" icon={<Plane className="w-5 h-5" />} />
       </div>
 
       <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs leading-5 text-slate-600">
         <span className="font-semibold text-[#092d6b]">Cómo leer estos indicadores:</span>{' '}
         los registros corresponden al total de novedades de inasistencia; las personas
         cuentan colaboradores únicos. Una persona puede tener varios registros dentro del período.
-        Los códigos L y P corresponden al motivo registrado en la fuente de asistencia.
+        Los códigos L, P y V corresponden al motivo registrado en la fuente de asistencia.
       </div>
 
       <DataTable
