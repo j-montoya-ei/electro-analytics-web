@@ -31,6 +31,11 @@ export type FilaHorasExtras = {
   total_recargos: number
   total_horas: number // extras + recargos (para costo futuro)
   meses_supera_48h: number // en cuántos meses del rango superó 48h
+  // ─── Costo (COP) ───
+  costo_he: number // costo de las 4 horas extra
+  costo_recargos: number // costo de los recargos (hoy 0: Buk no los registra)
+  costo_total: number // costo_he + costo_recargos
+  sin_salario: boolean // true = colaborador sin salario cargado → costo no contado
 }
 
 export default async function HorasExtrasPage({
