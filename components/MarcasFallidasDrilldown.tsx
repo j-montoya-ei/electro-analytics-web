@@ -1,99 +1,63 @@
+// ═══════════════════════════════════════════════════════════
+// Modal de detalle (drilldown) de Marcas fallidas
+// Muestra los intentos fallidos de un colaborador día por día.
+// Fuente: fn_marcas_fallidas_detalle(p_rut, desde, hasta)
+//
+// Ubicación: components/MarcasFallidasDrilldown.tsx
+// ═══════════════════════════════════════════════════════════
+
 'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-type DetalleDia = {
+type Detalle = {
   fecha: string
-  momento: string // 'Mañana' | 'Tarde'
-  hora_teorica: string
-  limite_gracia: string
-  hora_real: string
-  minutos: number            // desde la hora programada (principal)
-  minutos_tolerancia: number // sobre la tolerancia (referencia)
+  hora: string
+  sentido: string
+  error: string
+  id_dispositivo: string | null
 }
 
-function fmtMin(min: number): string {
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m === 0 ? `${h} h` : `${h} h ${m} m`
-}
-
-// '13:30:00' → '13:30'
-const hhmm = (t: string) => (t ? t.slice(0, 5) : '—')
-
-function minutosDesdeMedianoche(t: string): number {
-  const [horas, minutos] = t.slice(0, 5).split(':').map(Number)
-  return horas * 60 + minutos
-}
-
-function hhmmDesdeMinutos(total: number): string {
-  const minutosDelDia = ((total % 1440) + 1440) % 1440
-  return `${String(Math.floor(minutosDelDia / 60)).padStart(2, '0')}:${String(
-    minutosDelDia % 60
-  ).padStart(2, '0')}`
-}
-
-export default function LlegadasTardeDrilldown({
-  trabId,
+export default function MarcasFallidasDrilldown({
+  rut,
   nombre,
-  area,
   desde,
   hasta,
   onClose,
 }: {
-  trabId: string
+  rut: string
   nombre: string
-  area: string
   desde: string
   hasta: string
   onClose: () => void
 }) {
-  const [dias, setDias] = useState<DetalleDia[]>([])
+  const [dias, setDias] = useState<Detalle[]>([])
   const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Cerrar con tecla Escape
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   useEffect(() => {
     let activo = true
     ;(async () => {
       setCargando(true)
-      setError(null)
       const supabase = createClient()
-      const { data, error } = await supabase.rpc('fn_detalle_llegadas_tarde', {
-        p_trab_id: trabId,
+      const { data } = await supabase.rpc('fn_marcas_fallidas_detalle', {
+        p_rut: rut,
         desde,
         hasta,
       })
-      if (!activo) return
-      if (error) {
-        setError(error.message)
-      } else {
-        setDias((data ?? []) as DetalleDia[])
+      if (activo) {
+        setDias((data ?? []) as Detalle[])
+        setCargando(false)
       }
-      setCargando(false)
     })()
     return () => {
       activo = false
     }
-  }, [trabId, desde, hasta])
+  }, [rut, desde, hasta])
 
-  // KPIs del colaborador
-  const totalDias = dias.length
-  const totalMin = dias.reduce((s, d) => s + d.minutos, 0)
-  const peor = dias.reduce<DetalleDia | null>(
-    (max, d) => (!max || d.minutos > max.minutos ? d : max),
-    null
-  )
-  const diasManana = dias.filter((d) => d.momento === 'Mañana').length
-  const diasTarde = dias.filter((d) => d.momento === 'Tarde').length
+  const total = dias.length
+  const entrada = dias.filter((d) => d.sentido === 'Entrada').length
+  const salida = dias.filter((d) => d.sentido === 'Salida').length
 
   return (
     <div
@@ -109,7 +73,7 @@ export default function LlegadasTardeDrilldown({
           <div>
             <h3 className="text-lg font-bold text-gray-900">{nombre}</h3>
             <p className="text-sm text-gray-500">
-              {area} · {desde} a {hasta}
+              {rut} · {desde} a {hasta}
             </p>
           </div>
           <button
@@ -122,114 +86,49 @@ export default function LlegadasTardeDrilldown({
         </div>
 
         {/* KPIs del colaborador */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <div className="grid grid-cols-3 gap-3 px-6 py-4 bg-gray-50 border-b border-gray-200">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Días tarde</p>
-            <p className="text-xl font-bold text-gray-900">{totalDias}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Total intentos</p>
+            <p className="text-xl font-bold text-gray-900">{total}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">
-              Minutos desde hora oficial
-            </p>
-            <p className="text-xl font-bold text-[#00369C]">{fmtMin(totalMin)}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Entrada</p>
+            <p className="text-xl font-bold text-gray-900">{entrada}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Peor día</p>
-            <p className="text-xl font-bold text-gray-900">
-              {peor ? `${peor.minutos} min` : '—'}
-            </p>
-            {peor && <p className="text-xs text-gray-500">{peor.fecha}</p>}
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">
-              Mañana / Tarde
-            </p>
-            <p className="text-xl font-bold text-gray-900">
-              {diasManana} / {diasTarde}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Salida</p>
+            <p className="text-xl font-bold text-gray-900">{salida}</p>
           </div>
         </div>
 
-        {/* Tabla de días */}
-        <div className="overflow-y-auto px-6 py-4">
-          {cargando && (
-            <p className="text-sm text-gray-500 py-8 text-center">Cargando detalle…</p>
-          )}
-          {error && (
-            <p className="text-sm text-red-600 py-8 text-center">
-              No se pudo cargar el detalle: {error}
+        {/* Detalle */}
+        <div className="overflow-y-auto">
+          {cargando ? (
+            <p className="px-6 py-12 text-center text-sm text-gray-400">Cargando…</p>
+          ) : dias.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-gray-400">
+              Sin intentos fallidos en el rango.
             </p>
-          )}
-          {!cargando && !error && dias.length === 0 && (
-            <p className="text-sm text-gray-500 py-8 text-center">
-              Sin llegadas tarde registradas en el rango.
-            </p>
-          )}
-          {!cargando && !error && dias.length > 0 && (
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-4 font-semibold">Fecha</th>
-                  <th className="py-2 pr-4 font-semibold">Momento</th>
-                  <th className="py-2 pr-4 font-semibold">Debía marcar</th>
-                  <th className="py-2 pr-4 font-semibold">Marcó</th>
-                  <th className="py-2 text-right font-semibold">Minutos desde hora oficial</th>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-6 py-2 text-left font-semibold">Fecha</th>
+                  <th className="px-3 py-2 text-left font-semibold">Hora</th>
+                  <th className="px-3 py-2 text-left font-semibold">Sentido</th>
+                  <th className="px-3 py-2 text-left font-semibold">Error</th>
+                  <th className="px-6 py-2 text-left font-semibold">Dispositivo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {dias.map((d, i) => (
-                  (() => {
-                    const tienePermiso =
-                      minutosDesdeMedianoche(d.limite_gracia) >
-                      minutosDesdeMedianoche(d.hora_teorica) + 7
-                    const finPermiso = tienePermiso
-                      ? hhmmDesdeMinutos(minutosDesdeMedianoche(d.limite_gracia) - 7)
-                      : null
-                    const minutosDespuesPermiso = finPermiso
-                      ? minutosDesdeMedianoche(d.hora_real) -
-                        minutosDesdeMedianoche(finPermiso)
-                      : null
-
-                    return (
-                  <tr key={`${d.fecha}-${d.momento}-${i}`} className="hover:bg-gray-50">
-                    <td className="py-2 pr-4 text-gray-900">{d.fecha}</td>
-                    <td className="py-2 pr-4">
-                      <span
-                        className={
-                          'inline-block px-2 py-0.5 rounded text-xs font-medium ' +
-                          (d.momento === 'Mañana'
-                            ? 'bg-blue-100 text-[#00369C]'
-                            : 'bg-amber-100 text-amber-800')
-                        }
-                      >
-                        {d.momento}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4 text-gray-600">
-                      <div>{hhmm(d.hora_teorica)}</div>
-                      {finPermiso && (
-                        <div className="mt-1 text-xs font-medium text-emerald-700">
-                          Permiso hasta {finPermiso}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-900 font-medium">
-                      {hhmm(d.hora_real)}
-                    </td>
-                    <td className="py-2 text-right font-semibold text-gray-900">
-                      <div>{d.minutos} min</div>
-                      <div className="mt-1 text-xs font-normal text-gray-500">
-                        {d.minutos_tolerancia} min sobre tolerancia
-                      </div>
-                      {finPermiso && (
-                        <div className="mt-1 text-xs font-normal text-gray-500">
-                          {minutosDespuesPermiso} min después del permiso
-                        </div>
-                      )}
-                    </td>
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-6 py-2 whitespace-nowrap text-gray-700">{d.fecha}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-gray-700">{d.hora}</td>
+                    <td className="px-3 py-2 text-gray-600">{d.sentido}</td>
+                    <td className="px-3 py-2 text-gray-600">{d.error}</td>
+                    <td className="px-6 py-2 text-gray-500">{d.id_dispositivo}</td>
                   </tr>
-                    )
-                  })()
                 ))}
               </tbody>
             </table>
