@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AlertTriangle, Clock3, Medal, Timer, Users } from 'lucide-react'
+import { AlertTriangle, Banknote, Clock3, Medal, Timer, Users } from 'lucide-react'
 
 // Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type FilaHorasExtras = {
@@ -11,6 +11,8 @@ type FilaHorasExtras = {
   unidad_negocio: string
   horas_extra_reales: number
   meses_supera_48h: number
+  costo_total: number
+  sin_salario: boolean
 }
 
 function fmtHoras(h: number): string {
@@ -19,10 +21,16 @@ function fmtHoras(h: number): string {
   return Number.isInteger(r) ? `${r} h` : `${r} h`
 }
 
+function fmtCOP(v: number): string {
+  return '$' + Math.round(v).toLocaleString('es-CO')
+}
+
 export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
   const kpis = useMemo(() => {
     const totalColaboradores = data.length
     const totalHorasExtra = data.reduce((s, f) => s + (f.horas_extra_reales ?? 0), 0)
+    const costoTotal = data.reduce((s, f) => s + (f.costo_total ?? 0), 0)
+    const sinSalario = data.filter((f) => f.sin_salario).length
     const enAlerta = data.filter((f) => (f.meses_supera_48h ?? 0) > 0).length
 
     // Top colaborador por horas extra reales
@@ -34,16 +42,22 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
     // Proceso con más horas extra: suma directa por proceso (el que más consume).
     // A diferencia de tardanzas, aquí el indicador de GH es el TOTAL, no el
     // promedio, así que no se aplica umbral mínimo.
-    const porProceso = new Map<string, number>()
+    const porProceso = new Map<string, { horas: number; costo: number }>()
     for (const f of data) {
       const p = f.proceso ?? '—'
-      porProceso.set(p, (porProceso.get(p) ?? 0) + (f.horas_extra_reales ?? 0))
+      const prev = porProceso.get(p) ?? { horas: 0, costo: 0 }
+      porProceso.set(p, {
+        horas: prev.horas + (f.horas_extra_reales ?? 0),
+        costo: prev.costo + (f.costo_total ?? 0),
+      })
     }
     let procNombre = '—'
     let procHoras = -1
-    for (const [p, horas] of porProceso) {
-      if (horas > procHoras) {
-        procHoras = horas
+    let procCosto = 0
+    for (const [p, v] of porProceso) {
+      if (v.horas > procHoras) {
+        procHoras = v.horas
+        procCosto = v.costo
         procNombre = p
       }
     }
@@ -51,11 +65,16 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
     return {
       totalColaboradores,
       totalHorasExtra,
+      costoTotal,
+      sinSalario,
       enAlerta,
       topNombre: top?.nombre_completo ?? '—',
       topHoras: top?.horas_extra_reales ?? 0,
+      topCosto: top?.costo_total ?? 0,
+      topSinSalario: top?.sin_salario ?? false,
       procNombre: procHoras >= 0 ? procNombre : '—',
       procHoras: procHoras >= 0 ? procHoras : 0,
+      procCosto,
     }
   }, [data])
 
@@ -70,7 +89,7 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
     valor: string
     sub?: string
     icon: typeof Users
-    tone?: 'blue' | 'amber' | 'red' | 'slate'
+    tone?: 'blue' | 'amber' | 'red' | 'slate' | 'emerald'
   }) => (
     <div className="group rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -79,6 +98,7 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
           tone === 'amber' ? 'bg-amber-50 text-amber-600' :
           tone === 'red' ? 'bg-red-50 text-red-600' :
           tone === 'slate' ? 'bg-slate-100 text-slate-600' :
+          tone === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
           'bg-blue-50 text-[#00369C]'
         }`}>
           <Icon className="h-4 w-4" />
@@ -90,11 +110,22 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
   )
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       <Card
         label="Colaboradores con HE"
         valor={String(kpis.totalColaboradores)}
         icon={Users}
+      />
+      <Card
+        label="Costo total HE"
+        valor={fmtCOP(kpis.costoTotal)}
+        sub={
+          kpis.sinSalario > 0
+            ? `${kpis.sinSalario} sin salario (no contados)`
+            : 'Valor de ley del período'
+        }
+        icon={Banknote}
+        tone="emerald"
       />
       <Card
         label="Total horas extra"
@@ -113,13 +144,17 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
       <Card
         label="Proceso con más HE"
         valor={kpis.procNombre}
-        sub={`${fmtHoras(kpis.procHoras)} en total`}
+        sub={`${fmtHoras(kpis.procHoras)} · ${fmtCOP(kpis.procCosto)}`}
         icon={Clock3}
       />
       <Card
         label="Top colaborador"
         valor={(kpis.topNombre ?? '—').split(' ').slice(0, 2).join(' ')}
-        sub={`${fmtHoras(kpis.topHoras)} de HE`}
+        sub={
+          kpis.topSinSalario
+            ? `${fmtHoras(kpis.topHoras)} · sin salario`
+            : `${fmtHoras(kpis.topHoras)} · ${fmtCOP(kpis.topCosto)}`
+        }
         icon={Medal}
         tone="slate"
       />
