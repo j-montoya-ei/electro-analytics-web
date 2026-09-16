@@ -31,6 +31,8 @@ type Fila = {
   // ─── Totales (superó tolerancia: mañana + tarde) ───
   total_dias: number
   total_minutos: number
+  costo_total: number
+  sin_salario: boolean
 }
 export default async function LlegadasTardePage({
   searchParams,
