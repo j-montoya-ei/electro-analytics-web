@@ -19,37 +19,28 @@ type Fila = {
   minutos_tarde_teoricos: number
   total_dias: number
   total_minutos: number
+  costo_total: number
+  sin_salario: boolean
 }
 
 type ColKey =
   | 'nombre_completo'
   | 'area'
-  | 'tardanzas_oficiales'
-  | 'minutos_oficiales'
-  | 'dias_despues_teorica'
   | 'minutos_teoricos'
-  | 'tardanzas_tarde'
-  | 'minutos_tarde_oficiales'
-  | 'dias_despues_tarde'
   | 'minutos_tarde_teoricos'
-  | 'total_dias'
   | 'total_minutos'
+  | 'costo_total'
 
 const PAGE_SIZE = 10
+const fmtCOP = (v: number) => '$' + Math.round(v).toLocaleString('es-CO')
 
 const TIPO: Record<ColKey, 'texto' | 'num'> = {
   nombre_completo: 'texto',
   area: 'texto',
-  tardanzas_oficiales: 'num',
-  minutos_oficiales: 'num',
-  dias_despues_teorica: 'num',
   minutos_teoricos: 'num',
-  tardanzas_tarde: 'num',
-  minutos_tarde_oficiales: 'num',
-  dias_despues_tarde: 'num',
   minutos_tarde_teoricos: 'num',
-  total_dias: 'num',
   total_minutos: 'num',
+  costo_total: 'num',
 }
 
 export default function LlegadasTardeTable({
@@ -314,10 +305,10 @@ export default function LlegadasTardeTable({
       {/* Nota aclaratoria minimalista */}
       <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3.5 text-xs leading-relaxed text-gray-500 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <p>
-          <span className="font-semibold text-[#00369C]">TOL = Tolerancia:</span> minutos que exceden el margen de gracia permitido.{' '}
-          <span className="font-semibold text-gray-700">HORA = Hora reglamentaria:</span> minutos calculados desde la hora oficial de ingreso.{' '}
-          <span className="text-gray-400">|</span>{' '}
-          <span className="italic">El total acumulado suma ambos conceptos (TOL + HORA) por turno y por jornada.</span>
+          <span className="font-semibold text-[#00369C]">Mañana / Tarde</span>: minutos de retraso contados desde la hora programada de ingreso y de regreso de almuerzo.{' '}
+          <span className="font-semibold text-gray-700">Costo</span>: minutos × valor del minuto (salario ÷ jornada).{' '}
+          <span className="font-semibold text-amber-700">sin salario</span>: colaborador sin salario cargado, su costo no está contado.{' '}
+          Clic en una fila para ver el detalle por día.
         </p>
         <button
           type="button"
@@ -331,57 +322,26 @@ export default function LlegadasTardeTable({
 
       <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="min-w-[1180px] w-full text-sm">
+          <table className="min-w-[820px] w-full text-sm">
             <thead className="sticky top-0 z-10 text-gray-700 font-semibold">
-              {/* Fila superior de Categorías de Agrupación */}
               <tr className="border-b border-gray-200 bg-gray-50 text-xs">
-                <th rowSpan={2} onClick={() => ordenarPor('nombre_completo')} className={thTxt + ' sticky left-0 z-20 bg-gray-50'}>
+                <th onClick={() => ordenarPor('nombre_completo')} className={thTxt + ' sticky left-0 z-20 bg-gray-50'}>
                   Colaborador{flecha('nombre_completo')}
                 </th>
-                <th rowSpan={2} onClick={() => ordenarPor('area')} className={thTxt + ' sticky left-[190px] z-20 bg-gray-50'}>
+                <th onClick={() => ordenarPor('area')} className={thTxt + ' sticky left-[190px] z-20 bg-gray-50'}>
                   Proceso{flecha('area')}
                 </th>
-                <th colSpan={4} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
-                  Mañana (Entrada)
-                </th>
-                <th colSpan={4} className="px-3 py-2 text-center font-semibold text-gray-800 bg-gray-100/60 border-l border-gray-200">
-                  Tarde (Regreso Almuerzo)
-                </th>
-                <th colSpan={2} className="px-3 py-2 text-center font-bold text-[#00369C] bg-blue-50/50 border-l border-gray-200">
-                  Total acumulado (Tol + Hora)
-                </th>
-              </tr>
-              {/* Fila inferior de Métricas Específicas */}
-              <tr className="border-b border-gray-200 bg-white text-[11px] text-gray-500">
-                <th onClick={() => ordenarPor('tardanzas_oficiales')} className={thNum + ' border-l border-gray-200'}>
-                  Días (Tol){flecha('tardanzas_oficiales')}
-                </th>
-                <th onClick={() => ordenarPor('minutos_oficiales')} className={thNum}>
-                  Min (Tol){flecha('minutos_oficiales')}
-                </th>
-                <th onClick={() => ordenarPor('dias_despues_teorica')} className={thNum}>
-                  Días (Hora){flecha('dias_despues_teorica')}
-                </th>
-                <th onClick={() => ordenarPor('minutos_teoricos')} className={thNum}>
-                  Min (Hora){flecha('minutos_teoricos')}
-                </th>
-                <th onClick={() => ordenarPor('tardanzas_tarde')} className={thNum + ' border-l border-gray-200'}>
-                  Días (Tol){flecha('tardanzas_tarde')}
-                </th>
-                <th onClick={() => ordenarPor('minutos_tarde_oficiales')} className={thNum}>
-                  Min (Tol){flecha('minutos_tarde_oficiales')}
-                </th>
-                <th onClick={() => ordenarPor('dias_despues_tarde')} className={thNum}>
-                  Días (Hora){flecha('dias_despues_tarde')}
+                <th onClick={() => ordenarPor('minutos_teoricos')} className={thNum + ' border-l border-gray-200'}>
+                  Mañana (min){flecha('minutos_teoricos')}
                 </th>
                 <th onClick={() => ordenarPor('minutos_tarde_teoricos')} className={thNum}>
-                  Min (Hora){flecha('minutos_tarde_teoricos')}
+                  Tarde (min){flecha('minutos_tarde_teoricos')}
                 </th>
-                <th onClick={() => ordenarPor('total_dias')} className={thNum + ' border-l border-gray-200 font-bold text-gray-900 bg-blue-50/30'}>
-                  Días{flecha('total_dias')}
+                <th onClick={() => ordenarPor('total_minutos')} className={thNum + ' border-l border-gray-200 font-bold text-[#00369C] bg-blue-50/30'}>
+                  Total min{flecha('total_minutos')}
                 </th>
-                <th onClick={() => ordenarPor('total_minutos')} className={thNum + ' font-bold text-[#00369C] bg-blue-50/30'}>
-                  Minutos{flecha('total_minutos')}
+                <th onClick={() => ordenarPor('costo_total')} className={thNum + ' border-l border-gray-200 font-bold text-emerald-700 bg-emerald-50/40'}>
+                  Costo{flecha('costo_total')}
                 </th>
               </tr>
             </thead>
@@ -395,27 +355,31 @@ export default function LlegadasTardeTable({
                 >
                   <td className="sticky left-0 z-10 bg-inherit px-4 py-3 font-semibold text-gray-900 group-hover:bg-blue-50/50">{f.nombre_completo}</td>
                   <td className="sticky left-[190px] z-10 bg-inherit px-4 py-3 text-xs text-gray-600 group-hover:bg-blue-50/50">{f.area}</td>
-                  
-                  {/* Mañana */}
-                  <td className="border-l border-gray-100 px-3 py-3 text-right text-gray-600">{f.tardanzas_oficiales}</td>
-                  <td className={`px-3 py-3 text-right font-semibold ${f.minutos_oficiales > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{f.minutos_oficiales}</td>
-                  <td className="px-3 py-3 text-right text-gray-600">{f.dias_despues_teorica}</td>
-                  <td className={`px-3 py-3 text-right font-semibold ${f.minutos_teoricos > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{f.minutos_teoricos}</td>
 
-                  {/* Tarde */}
-                  <td className="border-l border-gray-100 px-3 py-3 text-right text-gray-600">{f.tardanzas_tarde}</td>
-                  <td className={`px-3 py-3 text-right font-semibold ${f.minutos_tarde_oficiales > 0 ? 'text-amber-700' : 'text-gray-400'}`}>{f.minutos_tarde_oficiales}</td>
-                  <td className="px-3 py-3 text-right text-gray-600">{f.dias_despues_tarde}</td>
-                  <td className={`px-3 py-3 text-right font-semibold ${f.minutos_tarde_teoricos > 0 ? 'text-amber-700' : 'text-gray-400'}`}>{f.minutos_tarde_teoricos}</td>
-
-                  {/* Totales */}
-                  <td className="border-l border-gray-200 bg-blue-50/20 px-3 py-3 text-right font-bold text-gray-900">{f.total_dias}</td>
-                  <td className="bg-blue-50/20 px-3 py-3 text-right font-bold text-[#00369C]">{f.total_minutos}</td>
+                  <td className={`border-l border-gray-100 px-3 py-3 text-right ${f.minutos_teoricos > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {f.minutos_teoricos > 0 ? f.minutos_teoricos : '—'}
+                  </td>
+                  <td className={`px-3 py-3 text-right ${f.minutos_tarde_teoricos > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {f.minutos_tarde_teoricos > 0 ? f.minutos_tarde_teoricos : '—'}
+                  </td>
+                  <td className="border-l border-gray-200 bg-blue-50/20 px-3 py-3 text-right font-bold text-[#00369C]">{f.total_minutos}</td>
+                  <td className="border-l border-gray-200 bg-emerald-50/20 px-3 py-3 text-right">
+                    {f.sin_salario ? (
+                      <span
+                        title="Colaborador sin salario cargado: su costo no está contado."
+                        className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
+                      >
+                        sin salario
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-gray-900">{fmtCOP(f.costo_total)}</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
                     No se registran llegadas tarde en el rango de fechas seleccionado.
                   </td>
                 </tr>
