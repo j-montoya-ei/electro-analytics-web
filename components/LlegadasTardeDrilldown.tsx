@@ -9,7 +9,8 @@ type DetalleDia = {
   hora_teorica: string
   limite_gracia: string
   hora_real: string
-  minutos: number
+  minutos: number            // desde la hora programada (principal)
+  minutos_tolerancia: number // sobre la tolerancia (referencia)
 }
 
 function fmtMin(min: number): string {
@@ -32,14 +33,6 @@ function hhmmDesdeMinutos(total: number): string {
   return `${String(Math.floor(minutosDelDia / 60)).padStart(2, '0')}:${String(
     minutosDelDia % 60
   ).padStart(2, '0')}`
-}
-
-function minutosDesdeHoraOficial(dia: DetalleDia): number {
-  return Math.max(
-    0,
-    minutosDesdeMedianoche(dia.hora_real) -
-      minutosDesdeMedianoche(dia.hora_teorica)
-  )
 }
 
 export default function LlegadasTardeDrilldown({
@@ -94,10 +87,9 @@ export default function LlegadasTardeDrilldown({
 
   // KPIs del colaborador
   const totalDias = dias.length
-  const totalMin = dias.reduce((s, d) => s + minutosDesdeHoraOficial(d), 0)
+  const totalMin = dias.reduce((s, d) => s + d.minutos, 0)
   const peor = dias.reduce<DetalleDia | null>(
-    (max, d) =>
-      !max || minutosDesdeHoraOficial(d) > minutosDesdeHoraOficial(max) ? d : max,
+    (max, d) => (!max || d.minutos > max.minutos ? d : max),
     null
   )
   const diasManana = dias.filter((d) => d.momento === 'Mañana').length
@@ -144,7 +136,7 @@ export default function LlegadasTardeDrilldown({
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">Peor día</p>
             <p className="text-xl font-bold text-gray-900">
-              {peor ? `${minutosDesdeHoraOficial(peor)} min` : '—'}
+              {peor ? `${peor.minutos} min` : '—'}
             </p>
             {peor && <p className="text-xs text-gray-500">{peor.fecha}</p>}
           </div>
@@ -225,9 +217,9 @@ export default function LlegadasTardeDrilldown({
                       {hhmm(d.hora_real)}
                     </td>
                     <td className="py-2 text-right font-semibold text-gray-900">
-                      <div>{minutosDesdeHoraOficial(d)} min</div>
+                      <div>{d.minutos} min</div>
                       <div className="mt-1 text-xs font-normal text-gray-500">
-                        {d.minutos} min sobre tolerancia
+                        {d.minutos_tolerancia} min sobre tolerancia
                       </div>
                       {finPermiso && (
                         <div className="mt-1 text-xs font-normal text-gray-500">
