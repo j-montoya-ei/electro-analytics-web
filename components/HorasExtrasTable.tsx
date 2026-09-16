@@ -17,6 +17,10 @@ type Fila = {
   total_recargos: number
   total_horas: number
   meses_supera_48h: number
+  costo_he: number
+  costo_recargos: number
+  costo_total: number
+  sin_salario: boolean
 }
 
 type ColKey =
@@ -27,6 +31,7 @@ type ColKey =
   | 'he_nocturna'
   | 'he_diurna_domfes'
   | 'horas_extra_reales'
+  | 'costo_total'
   | 'meses_supera_48h'
 
 const TIPO: Record<ColKey, 'texto' | 'num'> = {
@@ -37,11 +42,14 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
   he_nocturna: 'num',
   he_diurna_domfes: 'num',
   horas_extra_reales: 'num',
+  costo_total: 'num',
   meses_supera_48h: 'num',
 }
 
 // Formatea horas: 1 decimal, "—" si es 0 (para no saturar la tabla de ceros)
 const fmtH = (h: number) => (h > 0 ? (Math.round(h * 10) / 10).toString() : '—')
+// Formatea COP sin decimales: $1.234.567
+const fmtCOP = (v: number) => '$' + Math.round(v).toLocaleString('es-CO')
 const PAGE_SIZE = 10
 
 export default function HorasExtrasTable({
@@ -102,6 +110,10 @@ export default function HorasExtrasTable({
         <span className="font-semibold text-[#00369C]">Total HE</span>: horas extra
         reales del rango (diurna + nocturna + dominical/festiva), sin incluir recargos.
         Es la base del límite legal.{' '}
+        <span className="font-semibold text-gray-700">Costo total</span>: costo en pesos
+        de esas horas (valor hora × factor de ley).{' '}
+        <span className="font-semibold text-amber-700">sin salario</span>: colaborador sin
+        salario cargado, su costo no está contado.{' '}
         <span className="font-semibold text-gray-700">Meses &gt;48h</span>: en cuántos
         meses del rango el colaborador superó el tope mensual de horas extra.{' '}
         Clic en un encabezado para ordenar.
@@ -109,7 +121,7 @@ export default function HorasExtrasTable({
 
       <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
-        <table className="min-w-[900px] w-full text-sm">
+        <table className="min-w-[1040px] w-full text-sm">
           <thead className="sticky top-0 z-10 text-gray-700">
             {/* Súper-grupos */}
             <tr className="border-b border-gray-200 bg-gray-50">
@@ -127,6 +139,13 @@ export default function HorasExtrasTable({
                 className="px-4 py-1.5 text-center text-xs font-bold uppercase tracking-wide text-[#00369C] bg-blue-100 border-l-2 border-gray-300"
               >
                 Horas extra (h)
+              </th>
+              <th
+                rowSpan={2}
+                onClick={() => ordenarPor('costo_total')}
+                className={thNum + ' align-bottom border-l-2 border-gray-300'}
+              >
+                Costo total{flecha('costo_total')}
               </th>
               <th
                 rowSpan={2}
@@ -168,7 +187,19 @@ export default function HorasExtrasTable({
                 <td className="border-l border-gray-200 bg-blue-50/20 px-3 py-3 text-right font-bold text-[#00369C]">
                   {fmtH(f.horas_extra_reales)}
                 </td>
-                <td className="border-l border-gray-200 px-3 py-3 text-right">
+                <td className="border-l-2 border-gray-300 px-3 py-3 text-right">
+                  {f.sin_salario ? (
+                    <span
+                      title="Colaborador sin salario cargado: su costo no está contado."
+                      className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700"
+                    >
+                      sin salario
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-gray-900">{fmtCOP(f.costo_total)}</span>
+                  )}
+                </td>
+                <td className="border-l-2 border-gray-300 px-3 py-3 text-right">
                   {f.meses_supera_48h > 0 ? (
                     <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
                       {f.meses_supera_48h}
@@ -181,7 +212,7 @@ export default function HorasExtrasTable({
             ))}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
                   Sin horas extra en el rango seleccionado.
                 </td>
               </tr>
