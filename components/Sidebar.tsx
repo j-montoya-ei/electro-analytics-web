@@ -6,7 +6,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   PieChart,
   Users,
@@ -18,6 +18,8 @@ import {
   Coins,
   ChevronLeft,
   ChevronRight,
+  PanelLeftClose,
+  Menu,
 } from 'lucide-react'
 
 const navItems = [
@@ -31,9 +33,40 @@ const navItems = [
   { href: '/recaudo', label: 'Recaudo', icon: Coins },
 ]
 
+type SidebarMode = 'expanded' | 'collapsed' | 'hidden'
+
 export default function Sidebar() {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const [mode, setMode] = useState<SidebarMode>('expanded')
+  const [mounted, setMounted] = useState(false)
+  const collapsed = mode === 'collapsed'
+
+  // Recuerda la elección entre recargas
+  useEffect(() => {
+    setMounted(true)
+    const saved = localStorage.getItem('sidebar-mode')
+    if (saved === 'expanded' || saved === 'collapsed' || saved === 'hidden') {
+      setMode(saved)
+    }
+  }, [])
+  useEffect(() => {
+    if (mounted) localStorage.setItem('sidebar-mode', mode)
+  }, [mode, mounted])
+
+  // Oculto: la barra desaparece y queda solo un botón flotante para traerla de vuelta
+  if (mode === 'hidden') {
+    return (
+      <button
+        onClick={() => setMode('expanded')}
+        title="Mostrar menú"
+        aria-label="Mostrar menú"
+        className="fixed left-3 top-3 z-40 hidden h-10 w-10 items-center justify-center rounded-md border border-[#123b78] bg-[#092d6b] text-blue-100 shadow-lg transition-colors hover:bg-[#0d3a85] hover:text-white md:flex"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+    )
+  }
+
   return (
     <aside
       className={`sticky top-0 h-screen border-r border-[#123b78] bg-[#092d6b] transition-all duration-300 ${
@@ -87,18 +120,25 @@ export default function Sidebar() {
           )
         })}
       </nav>
-      {/* Botón colapsar */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex h-12 items-center justify-center border-t border-white/15 text-blue-200 transition-colors hover:bg-white/10 hover:text-white"
-        title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-      >
-        {collapsed ? (
-          <ChevronRight className="w-5 h-5" />
-        ) : (
-          <ChevronLeft className="w-5 h-5" />
-        )}
-      </button>
+      {/* Controles: minimizar y ocultar */}
+      <div className={`border-t border-white/15 ${collapsed ? 'flex flex-col' : 'flex flex-row'}`}>
+        <button
+          onClick={() => setMode(collapsed ? 'expanded' : 'collapsed')}
+          className="flex h-12 flex-1 items-center justify-center text-blue-200 transition-colors hover:bg-white/10 hover:text-white"
+          title={collapsed ? 'Expandir menú' : 'Minimizar menú'}
+        >
+          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
+        <button
+          onClick={() => setMode('hidden')}
+          className={`flex h-12 flex-1 items-center justify-center text-blue-200 transition-colors hover:bg-white/10 hover:text-white ${
+            collapsed ? 'border-t' : 'border-l'
+          } border-white/15`}
+          title="Ocultar menú"
+        >
+          <PanelLeftClose className="h-5 w-5" />
+        </button>
+      </div>
     </aside>
   )
 }
