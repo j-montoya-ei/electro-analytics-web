@@ -179,7 +179,7 @@ export default function DataTable({
                       <th
                         key={col}
                         onClick={() => toggleSort(col)}
-                        className="cursor-pointer select-none whitespace-nowrap px-4 py-3 text-left font-semibold text-gray-700 hover:bg-gray-100"
+                        className="cursor-pointer select-none px-4 py-3 text-left font-semibold text-gray-700 hover:bg-gray-100"
                       >
                         <span className="inline-flex items-center gap-1.5">
                           {prettifyHeader(col)}
@@ -195,7 +195,7 @@ export default function DataTable({
                       {columns.map((col) => (
                         <td
                           key={col}
-                          className="whitespace-nowrap px-4 py-3 text-gray-700"
+                          className="px-4 py-3 text-gray-700 break-words"
                         >
                           {formatValue(row[col])}
                         </td>
@@ -234,12 +234,12 @@ export default function DataTable({
           </div>
 
           {/* ── Paginación ─────────────────────────────────────── */}
-          <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-gray-500">
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between overflow-x-auto">
+            <p className="text-xs text-gray-500 shrink-0">
               Mostrando {start + 1}–
               {Math.min(start + pageSize, filtered.length)} de {filtered.length} registros
             </p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
