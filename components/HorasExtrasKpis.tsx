@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { AlertTriangle, Banknote, Clock3, Medal, Timer, Users } from 'lucide-react'
+import { fmtHorasMin } from '@/lib/formatHoras'
 
 // Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type FilaHorasExtras = {
@@ -15,11 +16,8 @@ type FilaHorasExtras = {
   sin_salario: boolean
 }
 
-function fmtHoras(h: number): string {
-  // 1 decimal, sin decimal si es entero
-  const r = Math.round(h * 10) / 10
-  return Number.isInteger(r) ? `${r} h` : `${r} h`
-}
+// "2 h 13 min" (redondeado al minuto)
+const fmtHoras = fmtHorasMin
 
 function fmtCOP(v: number): string {
   return '$' + Math.round(v).toLocaleString('es-CO')

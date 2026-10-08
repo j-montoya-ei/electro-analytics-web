@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { fmtHorasMin } from '@/lib/formatHoras'
 
 // Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type Fila = {
@@ -46,8 +47,8 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
   meses_supera_48h: 'num',
 }
 
-// Formatea horas: 1 decimal, "—" si es 0 (para no saturar la tabla de ceros)
-const fmtH = (h: number) => (h > 0 ? (Math.round(h * 10) / 10).toString() : '—')
+// Formatea horas como "2 h 13 min", "—" si es 0 (para no saturar la tabla de ceros)
+const fmtH = (h: number) => (Number(h) > 0 ? fmtHorasMin(h) : '—')
 // Formatea COP sin decimales: $1.234.567
 const fmtCOP = (v: number) => '$' + Math.round(v).toLocaleString('es-CO')
 const PAGE_SIZE = 10
@@ -111,7 +112,8 @@ export default function HorasExtrasTable({
         reales del rango (diurna + nocturna + dominical/festiva), sin incluir recargos.
         Es la base del límite legal.{' '}
         <span className="font-semibold text-gray-700">Costo total</span>: costo en pesos
-        de esas horas (valor hora × factor de ley).{' '}
+        de esas horas (valor hora × factor de ley). El costo se calcula con el tiempo
+        exacto registrado en Buk; las horas se muestran redondeadas al minuto.{' '}
         <span className="font-semibold text-amber-700">sin salario</span>: colaborador sin
         salario cargado, su costo no está contado.{' '}
         <span className="font-semibold text-gray-700">Meses &gt;48h</span>: en cuántos
