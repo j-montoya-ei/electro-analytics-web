@@ -1,7 +1,9 @@
 // ═══════════════════════════════════════════════════════════
 // Botón "Cargar incapacidades" (client component)
-// Sube el libro INCAPACIDADES_BASE_2026 (.xls/.xlsx) a
+// Sube el libro INCAPACIDADES_BASE_<AÑO> (.xls/.xlsx) a
 // /api/incapacidades/cargar, muestra el resumen y refresca.
+// La carga reemplaza SOLO el año del archivo; los demás años
+// quedan intactos.
 //
 // Ubicación: components/CargarIncapacidadesBoton.tsx
 // ═══════════════════════════════════════════════════════════
@@ -12,11 +14,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 
+// Resumen que devuelve fn_cargar_incapacidades
 type Resumen = {
+  anio: number
   recibidas: number
-  validas: number
-  insertados: number
-  ya_existentes: number
+  insertadas: number
+  reemplazadas: number
   descartadas: number
 }
 
@@ -88,8 +91,12 @@ export default function CargarIncapacidadesBoton() {
         <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
           <span>
-            {resumen.insertados} incapacidad(es) nueva(s) · {resumen.ya_existentes} ya
-            existían · {resumen.descartadas} descartadas
+            <strong>Año {resumen.anio}</strong> actualizado: {resumen.insertadas}{' '}
+            incapacidad(es) cargada(s)
+            {resumen.reemplazadas > 0 &&
+              ` · reemplazó ${resumen.reemplazadas} registro(s) anteriores de ${resumen.anio}`}
+            {resumen.descartadas > 0 &&
+              ` · ${resumen.descartadas} fila(s) descartada(s) por no tener ID INC o cédula`}
           </span>
         </div>
       )}
