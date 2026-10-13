@@ -33,6 +33,7 @@ import {
   Users,
   BadgeCheck,
   Banknote,
+  HandCoins,
   RotateCcw,
   ArrowUpRight,
   ArrowDownRight,
@@ -94,6 +95,10 @@ export type IncapacidadRow = {
   fecha_corte: string | null
   en_mismo_periodo: boolean
   es_anio_en_curso: boolean
+  // Por cobrar (regla en vw_incapacidades): Radicada → valor_tnl;
+  // Derecho Petición → valor_pendiente_cobrar; otros → 0
+  por_cobrar_tipo: string | null
+  valor_por_cobrar: number | string | null
 }
 
 // ── KPIs de un conjunto de filas ──────────────────────────────────
@@ -106,6 +111,8 @@ type Kpis = {
   aTiempo: number
   pctATiempo: number | null // 0–100; null si no hay radicadas
   costo: number
+  porCobrar: number
+  nPorCobrar: number
 }
 
 function calcKpis(rows: IncapacidadRow[]): Kpis {
@@ -116,7 +123,11 @@ function calcKpis(rows: IncapacidadRow[]): Kpis {
   const radicadas = rows.filter((r) => r.radicada).length
   const aTiempo = rows.filter((r) => r.radicada_a_tiempo).length
   const costo = rows.reduce((s, r) => s + num(r.total_incapacidad), 0)
+  const porCobrar = rows.reduce((s, r) => s + num(r.valor_por_cobrar), 0)
+  const nPorCobrar = rows.filter((r) => r.por_cobrar_tipo != null).length
   return {
+    porCobrar,
+    nPorCobrar,
     incap,
     dias,
     prom: incap > 0 ? Math.round((dias / incap) * 10) / 10 : 0,
@@ -263,7 +274,7 @@ export default function IncapacidadesDashboard({
       {comparando ? (
         <>
           {/* KPIs comparativos */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiComparativo
               label="Incapacidades"
               tone="blue"
@@ -316,6 +327,18 @@ export default function IncapacidadesDashboard({
               }))}
               mejorSiBaja
             />
+            <KpiComparativo
+              label="Por cobrar"
+              tone="red"
+              icon={<HandCoins className="h-5 w-5" />}
+              datos={kpisPorAnio.map(({ anio, k }) => ({
+                anio,
+                valor: k.porCobrar,
+                texto: fmtCosto(k.porCobrar),
+                detalle: `${fmtCOP(k.porCobrar)} · ${k.nPorCobrar} incap.`,
+              }))}
+              mejorSiBaja
+            />
           </div>
 
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
@@ -326,7 +349,7 @@ export default function IncapacidadesDashboard({
       ) : (
         <>
           {/* KPIs de un solo año */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-7">
             <KpiCard label="Incapacidades" value={kpis.incap} tone="blue" icon={<Stethoscope className="h-5 w-5" />} />
             <KpiCard label="Días acumulados" value={kpis.dias} tone="red" icon={<CalendarDays className="h-5 w-5" />} />
             <KpiCard label="Prom. días / incap." value={kpis.prom} tone="yellow" icon={<Gauge className="h-5 w-5" />} />
@@ -338,6 +361,7 @@ export default function IncapacidadesDashboard({
               icon={<BadgeCheck className="h-5 w-5" />}
             />
             <KpiCard label="Costo total" value={fmtCosto(kpis.costo)} tone="green" icon={<Banknote className="h-5 w-5" />} />
+            <KpiCard label="Por cobrar" value={fmtCosto(kpis.porCobrar)} tone="red" icon={<HandCoins className="h-5 w-5" />} />
           </div>
 
           {filtradas.length === 0 ? (

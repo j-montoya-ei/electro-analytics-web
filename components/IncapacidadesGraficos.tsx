@@ -69,6 +69,19 @@ export type Row = {
   // De vw_incapacidades: solo el año en curso se compara con la plantilla
   // activa de hoy (la plantilla de años anteriores no está disponible).
   es_anio_en_curso: boolean
+  // Por cobrar (regla en vw_incapacidades)
+  por_cobrar_tipo: string | null
+  valor_por_cobrar: number | string | null
+}
+
+// Por cobrar por entidad: radicado sin pagar + saldo en disputa
+type CobrarEnt = {
+  name: string
+  radicado: number
+  nRadicado: number
+  disputa: number
+  nDisputa: number
+  total: number
 }
 
 // Métricas agregadas por categoría (cargo, proceso, entidad, diagnóstico…)
@@ -134,11 +147,26 @@ export default function IncapacidadesGraficos({
     return [...m.entries()].sort((a, b) => a[0] - b[0]).map(([d, value]) => ({ name: String(d), value }))
   }, [rows])
 
-  const carteraEstado = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const r of rows) m.set(norm(r.estado), (m.get(norm(r.estado)) ?? 0) + num(r.valor_pendiente_cobrar))
-    return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  const porCobrarEntidad = useMemo(() => {
+    const m = new Map<string, CobrarEnt>()
+    for (const r of rows) {
+      if (r.por_cobrar_tipo == null) continue
+      const k = r.entidad_norm || SIN_DATO
+      const c = m.get(k) ?? { name: k, radicado: 0, nRadicado: 0, disputa: 0, nDisputa: 0, total: 0 }
+      const v = num(r.valor_por_cobrar)
+      if (r.por_cobrar_tipo === 'Radicada sin pagar') {
+        c.radicado += v
+        c.nRadicado += 1
+      } else {
+        c.disputa += v
+        c.nDisputa += 1
+      }
+      c.total += v
+      m.set(k, c)
+    }
+    return [...m.values()].sort((a, b) => b.total - a.total)
   }, [rows])
+  const totalPorCobrar = useMemo(() => porCobrarEntidad.reduce((s, c) => s + c.total, 0), [porCobrarEntidad])
 
   const derechoPeticion = useMemo(() => {
     const m = new Map<string, number>()
@@ -345,16 +373,64 @@ export default function IncapacidadesGraficos({
       {/* ── Cartera y radicación ── */}
       <Seccion titulo="Cartera y radicación">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Panel titulo="Cartera por estado" nota="valor pendiente por cobrar">
-            <Alto>
-              <BarChart data={carteraEstado} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
-                <XAxis dataKey="name" tick={{ ...tickX, fontSize: 10 }} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
-                <YAxis tick={tickX} axisLine={false} tickLine={false} tickFormatter={(v) => fmtCosto(Number(v))} width={64} />
-                <Tooltip cursor={{ fill: 'rgba(0,54,156,0.04)' }} contentStyle={tipStyle} formatter={(v) => [fmtCOP(Number(v)), 'Pendiente']} />
-                <Bar dataKey="value" fill={NARANJA} radius={[4, 4, 0, 0]} maxBarSize={44} />
-              </BarChart>
-            </Alto>
+          <Panel
+            titulo="Por cobrar por entidad (EPS/ARL)"
+            nota={`total ${fmtCOP(totalPorCobrar)}`}
+          >
+            {porCobrarEntidad.length === 0 ? (
+              <Vacio texto="Nada pendiente por cobrar con los filtros actuales." />
+            ) : (
+              <Alto h="h-80">
+                <BarChart
+                  data={porCobrarEntidad}
+                  layout="vertical"
+                  margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eef2f7" />
+                  <XAxis
+                    type="number"
+                    tick={tickX}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => fmtCosto(Number(v))}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    tick={{ fontSize: 11, fill: '#374151' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: string) => trunc(v, 22)}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0,54,156,0.04)' }}
+                    content={(p: TooltipProps<number, string>) => {
+                      const d = p.payload?.[0]?.payload as CobrarEnt | undefined
+                      if (!p.active || !d) return null
+                      const pct = totalPorCobrar > 0 ? Math.round((d.total / totalPorCobrar) * 100) : 0
+                      return (
+                        <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
+                          <p className="mb-1 font-semibold text-gray-900">{d.name}</p>
+                          <p className="text-gray-900">
+                            Por cobrar: <strong>{fmtCOP(d.total)}</strong> ({pct}% del total)
+                          </p>
+                          <p className="text-[#00369C]">
+                            Radicada sin pagar: {fmtCOP(d.radicado)} · {d.nRadicado} incap.
+                          </p>
+                          <p className="text-[#B45309]">
+                            Saldo en disputa: {fmtCOP(d.disputa)} · {d.nDisputa} incap.
+                          </p>
+                        </div>
+                      )
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="radicado" name="Radicada sin pagar" stackId="c" fill={AZUL} maxBarSize={22} />
+                  <Bar dataKey="disputa" name="Saldo en disputa" stackId="c" fill={NARANJA} radius={[0, 4, 4, 0]} maxBarSize={22} />
+                </BarChart>
+              </Alto>
+            )}
           </Panel>
 
           <Panel titulo="Derecho de petición · valor a recaudar por EPS" nota="estado = Derecho Petición">
