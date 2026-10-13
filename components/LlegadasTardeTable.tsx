@@ -32,6 +32,15 @@ type ColKey =
   | 'costo_total'
 
 const PAGE_SIZE = 10
+
+const ETIQUETA_COL: Record<ColKey, string> = {
+  nombre_completo: 'colaborador',
+  area: 'proceso',
+  minutos_teoricos: 'minutos mañana',
+  minutos_tarde_teoricos: 'minutos tarde',
+  total_minutos: 'minutos totales',
+  costo_total: 'costo',
+}
 const fmtCOP = (v: number) => '$' + Math.round(v).toLocaleString('es-CO')
 
 const TIPO: Record<ColKey, 'texto' | 'num'> = {
@@ -82,12 +91,10 @@ export default function LlegadasTardeTable({
   const filasVisibles = filas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
 
   function exportarExcel() {
-    // Top 20 por minutos totales acumulados (TOL + HORA), independiente del
-    // orden en pantalla, para que el título "Top N ... con más llegadas tarde"
-    // sea siempre veraz. (Cambio deliberado: antes exportaba el orden de la vista.)
-    const filasExportadas = [...data]
-      .sort((a, b) => b.total_minutos - a.total_minutos)
-      .slice(0, 10)
+    // Exporta exactamente la página visible, en el mismo orden de la pantalla.
+    // (Antes: top 10 global por total_minutos, sin importar la página.)
+    const filasExportadas = filasVisibles
+    const offset = (pagina - 1) * PAGE_SIZE
 
     const n = filasExportadas.length
     const NCOLS = 13
@@ -102,10 +109,10 @@ export default function LlegadasTardeTable({
     // ── Matriz de valores ─────────────────────────────────────────────
     const aoa: (string | number)[][] = []
     aoa[R_TITULO] = [
-      `Top ${n} colaboradores con más llegadas tarde — Electroingeniería S.A.S.`,
+      `Llegadas tarde — posiciones ${offset + 1} a ${offset + n} de ${filas.length} — Electroingeniería S.A.S.`,
     ]
     aoa[R_SUB] = [
-      `Período: ${desde} a ${hasta}  ·  Ordenado por minutos totales acumulados (mañana + tarde)`,
+      `Período: ${desde} a ${hasta}  ·  Página ${pagina} de ${totalPaginas}  ·  Ordenado por ${ETIQUETA_COL[sortKey]} (${sortDir === 'asc' ? 'ascendente' : 'descendente'})`,
     ]
     aoa[R_SPACER] = []
     aoa[R_GRUPO] = [
@@ -122,7 +129,7 @@ export default function LlegadasTardeTable({
     ]
     filasExportadas.forEach((f, i) => {
       aoa[R_DATA0 + i] = [
-        i + 1, f.nombre_completo, f.area,
+        offset + i + 1, f.nombre_completo, f.area,
         f.tardanzas_oficiales, f.minutos_oficiales, f.dias_despues_teorica, f.minutos_teoricos,
         f.tardanzas_tarde, f.minutos_tarde_oficiales, f.dias_despues_tarde, f.minutos_tarde_teoricos,
         f.total_dias, f.total_minutos,
@@ -281,7 +288,7 @@ export default function LlegadasTardeTable({
 
     const libro = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(libro, hoja, 'Llegadas tarde')
-    XLSX.writeFile(libro, `llegadas-tarde-${desde}-${hasta}.xlsx`)
+    XLSX.writeFile(libro, `llegadas-tarde-${desde}-${hasta}-pag${pagina}.xlsx`)
   }
 
   useEffect(() => {
@@ -316,7 +323,7 @@ export default function LlegadasTardeTable({
           disabled={filas.length === 0}
           className="shrink-0 rounded-md bg-[#087F5B] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#06684B] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Exportar Excel (10)
+          Exportar Excel (página {pagina})
         </button>
       </div>
 
