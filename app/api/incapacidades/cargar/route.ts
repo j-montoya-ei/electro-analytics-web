@@ -1,14 +1,22 @@
 // ═══════════════════════════════════════════════════════════
 // POST /api/incapacidades/cargar
-// Recibe el libro INCAPACIDADES_BASE_2026 (.xls o .xlsx), hoja
+// Recibe el libro INCAPACIDADES_BASE_<AÑO> (.xls o .xlsx), hoja
 // 'Incapacidades', extrae las filas y las carga vía RPC
 // fn_cargar_incapacidades.
 //
 // El RPC aplica las reglas de negocio (no este handler):
+//   - el año sale de FECHA INICIAL; un archivo = un solo año
+//   - REEMPLAZO TOTAL del año: borra ese año e inserta el archivo
+//     (los demás años quedan intactos)
 //   - limpia la cédula (deja solo dígitos)
-//   - descarta filas sin ID Incapacidad o sin cédula
-//   - deduplica por id_incapacidad
-//   - upsert idempotente: ON CONFLICT (id_incapacidad) DO NOTHING
+//   - descarta filas sin ID INC o sin cédula (y las reporta)
+//   - rechaza el archivo si hay ID INC repetidos o filas sin
+//     Fecha Inicial
+//   - normaliza PRORROGA ('SI' -> 'Si', 'NO' -> 'No')
+//
+// Este handler exige que estén TODAS las columnas: como la carga
+// reemplaza el año completo, una columna faltante borraría ese dato
+// para todo el año.
 //
 // Ubicación: app/api/incapacidades/cargar/route.ts
 // ═══════════════════════════════════════════════════════════
@@ -20,45 +28,43 @@ import { createClient } from '@/lib/supabase/server'
 // El parseo de Excel usa Buffer → requiere runtime Node, no Edge.
 export const runtime = 'nodejs'
 
-// Encabezados exactos del reporte. Se localizan por nombre (no por
-// posición) para no romperse si se reordenan columnas. La clave de cada
+// Encabezados del archivo INCAPACIDADES_BASE (verificados en 2025 y 2026).
+// Se localizan por nombre (no por posición). La comparación ignora
+// mayúsculas, tildes y espacios extra (ver norm()). La clave de cada
 // entrada es el nombre interno que espera el RPC (x->>'clave').
 const LABELS = {
-  id_incapacidad: 'ID Incapacidad',
-  dni: 'Cédula',
-  nombre: 'Nombres y apellidos',
-  cargo: 'Cargo',
-  unidad_negocio: 'Unidad de negocio',
-  proceso: 'Proceso',
-  codigo_dx: 'Código diagnóstico',
-  descripcion_dx: 'Descripción código diagnóstico',
-  mes: 'Mes',
-  fecha_inicial: 'Fecha Inicial',
-  fecha_final: 'Fecha Final',
-  nro_dias: 'Nro.Dias',
-  clase: 'Clase de incapacidad',
-  es_prorroga: 'Es prorroga',
-  valor_ibc: 'Valor IBC',
-  valor_tnl: 'Valor TNL',
-  valor_cia_3dias: 'Valor Cia. 3 Dias',
-  total_incapacidad: 'Total Incapacidad',
-  entidad: 'Entidad',
-  observacion: 'Observación',
+  id_incapacidad: 'ID INC',
+  dni: 'No ID',
+  nombre: 'NOMBRES Y APELLIDOS',
+  cargo: 'CARGO',
+  unidad_negocio: 'UN',
+  proceso: 'PROCESO',
+  codigo_dx: 'CODIGO DIAG',
+  descripcion_dx: 'DESCRIPCIÓN CÓDIGO DIAGNÓSTICO',
+  mes: 'MES',
+  fecha_inicial: 'FECHA INICIAL',
+  fecha_final: 'FECHA FIN',
+  nro_dias: 'Nro.DÍAS',
+  clase: 'CLASE DE INC',
+  es_prorroga: 'PRORROGA',
+  valor_ibc: 'VALOR IBC',
+  valor_tnl: 'VALOR TNL',
+  valor_cia_3dias: 'VALOR CIA. 3 DIAS',
+  total_incapacidad: 'TOTAL INC',
+  entidad: 'ENTIDAD',
+  observacion: 'OBSERVACIÓN',
   an: 'AN',
-  radicado: 'Radicado',
-  fecha_radicado: 'Fecha Radicado',
-  dias_radicacion: 'Días',
-  radicacion_a_tiempo: 'Radicación a tiempo',
-  estado: 'Estado',
-  fecha_pago: 'Fecha de Pago',
-  dias_espera: 'Dias de Espera',
-  valor_pendiente_cobrar: 'Valor Pte por cobrar',
+  radicado: 'RADICADO',
+  fecha_radicado: 'FECHA RADICADO',
+  dias_radicacion: 'DÍAS',
+  radicacion_a_tiempo: 'RADICADO A TIEMPO',
+  estado: 'ESTADO',
+  fecha_pago: 'FECHA DE PAGO',
+  dias_espera: 'DÍAS DE ESPERA',
+  valor_pendiente_cobrar: 'VALOR PTE POR COBRAR',
 } as const
 
 type Campo = keyof typeof LABELS
-
-// Sin estas dos columnas una fila no puede procesarse (el RPC las exige).
-const CRITICAS: Campo[] = ['id_incapacidad', 'dni']
 
 // Campos que el RPC castea a date. El resto se envían como texto.
 const CAMPOS_FECHA: Campo[] = [
@@ -81,6 +87,16 @@ const CAMPOS_NUMERO: Campo[] = [
   'valor_pendiente_cobrar',
 ]
 
+// Encabezado normalizado: sin tildes, mayúsculas, espacios simples.
+// Así 'Nro.DÍAS', 'NRO.DIAS' o 'Nro.Días ' se reconocen igual.
+const norm = (v: unknown): string =>
+  String(v ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
 // Fecha → 'YYYY-MM-DD'. Con cellDates:true los valores de fecha llegan como
 // Date en UTC medianoche. Si viniera texto 'DD-MM-YYYY' se reordena; si ya
 // viene 'YYYY-MM-DD' se respeta. Cualquier otro texto (p.ej. el marcador
@@ -99,7 +115,7 @@ const fmtFecha = (v: unknown): string | null => {
 // Número → texto numérico limpio. Con raw:true las celdas numéricas llegan
 // como number → String() no introduce separador de miles. Un texto solo se
 // acepta si es un número válido (con signo/decimales); cualquier otra cosa
-// (p.ej. el marcador '-' de "sin dato") → null, para no romper el cast.
+// (p.ej. el marcador ' - ' de "sin dato") → null, para no romper el cast.
 const num = (v: unknown): string | null => {
   if (v == null) return null
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null
@@ -161,30 +177,35 @@ export async function POST(request: NextRequest) {
       defval: null,
     })
 
-    // Localizar la fila de encabezados por la etiqueta del ID Incapacidad
+    // Localizar la fila de encabezados por la etiqueta 'ID INC'
+    const claveId = norm(LABELS.id_incapacidad)
     const hIdx = rows.findIndex(
-      (r) => Array.isArray(r) && r.includes(LABELS.id_incapacidad),
+      (r) => Array.isArray(r) && r.some((c) => norm(c) === claveId),
     )
     if (hIdx === -1) {
       return NextResponse.json(
-        { error: 'No se encontró la fila de encabezados del reporte de Incapacidades' },
+        {
+          error:
+            'No se encontró la fila de encabezados (columna "ID INC"). ¿Es el archivo INCAPACIDADES_BASE?',
+        },
         { status: 400 },
       )
     }
-    const header = rows[hIdx] as unknown[]
+    const header = (rows[hIdx] as unknown[]).map(norm)
 
     const idx = Object.fromEntries(
       (Object.entries(LABELS) as [Campo, string][]).map(([k, label]) => [
         k,
-        header.indexOf(label),
+        header.indexOf(norm(label)),
       ]),
     ) as Record<Campo, number>
 
-    const faltantes = CRITICAS.filter((k) => idx[k] === -1)
+    // Todas las columnas son obligatorias (la carga reemplaza el año completo)
+    const faltantes = (Object.keys(LABELS) as Campo[]).filter((k) => idx[k] === -1)
     if (faltantes.length) {
       return NextResponse.json(
         {
-          error: `Faltan columnas en el reporte: ${faltantes
+          error: `Faltan columnas en el archivo: ${faltantes
             .map((k) => LABELS[k])
             .join(', ')}`,
         },
@@ -201,14 +222,12 @@ export async function POST(request: NextRequest) {
     filas = []
     for (const r of rows.slice(hIdx + 1)) {
       if (!Array.isArray(r)) continue
-      const idRaw = idx.id_incapacidad === -1 ? null : r[idx.id_incapacidad]
-      const id = idRaw == null ? null : String(idRaw).trim()
-      if (!id) continue // fila vacía o pie del reporte
+      // Fila totalmente vacía → se ignora (no cuenta como descartada)
+      if (r.every((c) => c == null || String(c).trim() === '')) continue
 
       const fila: Record<string, string | null> = {}
       for (const k of Object.keys(LABELS) as Campo[]) {
-        const i = idx[k]
-        fila[k] = i === -1 ? null : formatear(k, r[i])
+        fila[k] = formatear(k, r[idx[k]])
       }
       filas.push(fila)
     }
@@ -218,17 +237,19 @@ export async function POST(request: NextRequest) {
 
   if (filas.length === 0) {
     return NextResponse.json(
-      { error: 'El reporte no contiene filas de datos' },
+      { error: 'El archivo no contiene filas de datos' },
       { status: 400 },
     )
   }
 
-  // 4) Cargar vía RPC
+  // 4) Cargar vía RPC (reemplazo total del año, en una transacción)
   const { data, error } = await supabase.rpc('fn_cargar_incapacidades', {
     p_filas: filas,
   })
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // Los RAISE EXCEPTION del RPC traen mensajes pensados para el usuario
+    // (años mezclados, ID repetidos, filas sin Fecha Inicial).
+    return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
   return NextResponse.json({ ok: true, resumen: data })
