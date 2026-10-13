@@ -61,9 +61,18 @@ export default function IncapacidadesPersonas({ rows }: { rows: Row[] }) {
     [personas],
   )
 
-  const cortasRepetidas = personas.filter((p) => p.cortas >= 3)
-  const recurrentes = personas.filter((p) => p.incap >= 3)
-  const acumulado90 = personas.filter((p) => p.dias > 90)
+  // Alertas ordenadas de mayor a menor por la métrica de cada una;
+  // desempate por la métrica secundaria y luego por nombre (orden estable).
+  const porNombre = (a: Persona, b: Persona) => a.nombre.localeCompare(b.nombre, 'es')
+  const cortasRepetidas = personas
+    .filter((p) => p.cortas >= 3)
+    .sort((a, b) => b.cortas - a.cortas || b.incap - a.incap || porNombre(a, b))
+  const recurrentes = personas
+    .filter((p) => p.incap >= 3)
+    .sort((a, b) => b.incap - a.incap || b.dias - a.dias || porNombre(a, b))
+  const acumulado90 = personas
+    .filter((p) => p.dias > 90)
+    .sort((a, b) => b.dias - a.dias || b.incap - a.incap || porNombre(a, b))
 
   return (
     <div className="space-y-8">
