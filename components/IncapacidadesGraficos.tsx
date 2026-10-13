@@ -66,6 +66,9 @@ export type Row = {
   nro_dias: number | string | null
   total_incapacidad: number | string | null
   valor_pendiente_cobrar: number | string | null
+  // De vw_incapacidades: solo el año en curso se compara con la plantilla
+  // activa de hoy (la plantilla de años anteriores no está disponible).
+  es_anio_en_curso: boolean
 }
 
 // Métricas agregadas por categoría (cargo, proceso, entidad, diagnóstico…)
@@ -147,10 +150,10 @@ export default function IncapacidadesGraficos({
   }, [rows])
 
   const porAnio = useMemo(() => {
-    const m = new Map<number, { incap: number; trab: Set<string> }>()
+    const m = new Map<number, { incap: number; trab: Set<string>; enCurso: boolean }>()
     for (const r of rows) {
       const a = r.anio ?? 0
-      const cur = m.get(a) ?? { incap: 0, trab: new Set<string>() }
+      const cur = m.get(a) ?? { incap: 0, trab: new Set<string>(), enCurso: r.es_anio_en_curso }
       cur.incap += 1
       cur.trab.add(r.dni)
       m.set(a, cur)
@@ -161,7 +164,12 @@ export default function IncapacidadesGraficos({
         anio: anio === 0 ? SIN_DATO : String(anio),
         incap: v.incap,
         trabajadores: v.trab.size,
-        pct: plantilla && plantilla > 0 ? Math.round((v.trab.size / plantilla) * 100) : null,
+        enCurso: v.enCurso,
+        // % solo para el año en curso: la plantilla activa es la de hoy
+        pct:
+          v.enCurso && plantilla && plantilla > 0
+            ? Math.round((v.trab.size / plantilla) * 100)
+            : null,
       }))
   }, [rows, plantilla])
 
@@ -393,8 +401,14 @@ export default function IncapacidadesGraficos({
               </tbody>
             </table>
           </div>
-          {plantilla == null && (
+          {plantilla == null ? (
             <p className="mt-3 text-xs text-gray-400">Plantilla activa no disponible; no se calcula el porcentaje.</p>
+          ) : (
+            porAnio.some((a) => !a.enCurso) && (
+              <p className="mt-3 text-xs text-gray-400">
+                El % solo se calcula para el año en curso: la plantilla de años anteriores no está disponible.
+              </p>
+            )
           )}
         </Panel>
       </Seccion>
