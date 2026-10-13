@@ -223,7 +223,9 @@ export default function IncapacidadesDashboard({
   }
 
   return (
-    <div className="space-y-6">
+    // @container: las grillas de KPIs se acomodan al ANCHO REAL del tablero
+    // (cambia con el menú lateral expandido/minimizado/oculto), no al de la pantalla.
+    <div className="@container space-y-6">
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 md:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -274,7 +276,8 @@ export default function IncapacidadesDashboard({
       {comparando ? (
         <>
           {/* KPIs comparativos */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* 1 col (<512px) · 2 cols · 4 cols (≥896px) */}
+          <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @4xl:grid-cols-4">
             <KpiComparativo
               label="Incapacidades"
               tone="blue"
@@ -337,7 +340,9 @@ export default function IncapacidadesDashboard({
                 texto: fmtCosto(k.porCobrar),
                 detalle: `${fmtCOP(k.porCobrar)} · ${k.nPorCobrar} incap.`,
               }))}
-              mejorSiBaja
+              // Saldo a hoy (lo que falta cobrar), no un flujo del año:
+              // la variación entre años no es comparable → se muestra nota.
+              nota="Saldo pendiente a hoy · no comparable entre años"
             />
           </div>
 
@@ -349,11 +354,12 @@ export default function IncapacidadesDashboard({
       ) : (
         <>
           {/* KPIs de un solo año */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-7">
-            <KpiCard label="Incapacidades" value={kpis.incap} tone="blue" icon={<Stethoscope className="h-5 w-5" />} />
-            <KpiCard label="Días acumulados" value={kpis.dias} tone="red" icon={<CalendarDays className="h-5 w-5" />} />
+          {/* 2 cols · 3 (≥672px) · 4 (≥992px) · 7 en una fila solo si caben (≥1760px) */}
+          <div className="grid grid-cols-2 gap-4 @2xl:grid-cols-3 @[62rem]:grid-cols-4 @[110rem]:grid-cols-7">
+            <KpiCard label="Incapacidades" value={fmtNum(kpis.incap)} tone="blue" icon={<Stethoscope className="h-5 w-5" />} />
+            <KpiCard label="Días acumulados" value={fmtNum(kpis.dias)} tone="red" icon={<CalendarDays className="h-5 w-5" />} />
             <KpiCard label="Prom. días / incap." value={kpis.prom} tone="yellow" icon={<Gauge className="h-5 w-5" />} />
-            <KpiCard label="Trabajadores" value={kpis.trabajadores} tone="blue" icon={<Users className="h-5 w-5" />} />
+            <KpiCard label="Trabajadores" value={fmtNum(kpis.trabajadores)} tone="blue" icon={<Users className="h-5 w-5" />} />
             <KpiCard
               label="Radicadas a tiempo"
               value={kpis.pctATiempo == null ? '—' : `${kpis.pctATiempo}%`}
@@ -402,6 +408,7 @@ function KpiComparativo({
   datos,
   mejorSiBaja = false,
   enPuntos = false,
+  nota,
 }: {
   label: string
   icon: ReactNode
@@ -409,6 +416,7 @@ function KpiComparativo({
   datos: { anio: number; valor: number | null; texto: string; detalle?: string }[]
   mejorSiBaja?: boolean // true: subir es malo (rojo)
   enPuntos?: boolean // true: variación en puntos porcentuales (para %)
+  nota?: string // si viene, reemplaza la variación (métricas no comparables)
 }) {
   // Ordenado del más reciente al más antiguo
   const filas = [...datos].sort((a, b) => b.anio - a.anio)
@@ -470,7 +478,9 @@ function KpiComparativo({
           ))}
         </ul>
 
-        {variacion && ult && ant && (
+        {nota ? (
+          <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">{nota}</p>
+        ) : variacion && ult && ant && (
           <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3 text-xs">
             <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold ${colorVar}`}>
               {variacion.dir === 'sube' ? (
