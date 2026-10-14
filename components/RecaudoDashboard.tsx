@@ -181,8 +181,8 @@ export default function RecaudoDashboard({
           </select>
         </div>
         <p className="text-xs text-gray-500">
-          Calculado desde la base de incapacidades. Lo recaudado asume que la EPS pagó el TNL completo
-          (la base no trae “valor pagado”).
+          Calculado desde la base de incapacidades. Pagada = TNL completo; en Derecho Petición se
+          descuenta el saldo pendiente que registra GH (la base no trae “valor pagado”).
         </p>
       </div>
 
@@ -417,7 +417,7 @@ function CarteraEntidad({ cartera, disputa }: { cartera: CarteraRow[]; disputa: 
     <Seccion titulo="Cartera por entidad">
       <Panel
         titulo="Cartera del mes"
-        nota="saldo por cobrar = TNL radicado sin pago (sin negadas)"
+        nota="saldo = radicado sin pago (sin negadas) · Derecho Petición por su saldo pendiente"
         accion={
           <select
             value={mes}
