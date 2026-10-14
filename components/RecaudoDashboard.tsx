@@ -84,6 +84,13 @@ const fmtMesLargo = (iso: string) => {
 }
 const anioDe = (iso: string) => iso.slice(0, 4)
 
+// Matriz: columnas fijas (Generación + Causado a la izquierda, Recaudado + % a la derecha).
+// Anchos fijos para que los offsets de sticky cuadren; la sombra separa la zona que se desplaza.
+const FIJA_GEN = 'sticky left-0 w-[7.5rem] min-w-[7.5rem] whitespace-nowrap bg-white px-2'
+const FIJA_CAU = 'sticky left-[7.5rem] w-[5rem] min-w-[5rem] whitespace-nowrap bg-white pl-2 pr-3 shadow-[inset_-1px_0_0_#d1d5db]'
+const FIJA_REC = 'sticky right-[3.5rem] w-[5.5rem] min-w-[5.5rem] whitespace-nowrap bg-white pl-3 pr-2 shadow-[inset_1px_0_0_#d1d5db]'
+const FIJA_PCT = 'sticky right-0 w-[3.5rem] min-w-[3.5rem] whitespace-nowrap bg-white px-2'
+
 const AZUL = '#00369C'
 const VERDE = '#059669'
 const NARANJA = '#EA8C00'
@@ -307,24 +314,24 @@ export default function RecaudoDashboard({
               <table className="min-w-full border-separate border-spacing-0 text-xs">
                 <thead>
                   <tr className="text-gray-500">
-                    <th className="sticky left-0 z-10 bg-white px-2 py-2 text-left font-semibold">Generación</th>
-                    <th className="px-2 py-2 text-right font-semibold">Causado</th>
+                    <th className={`${FIJA_GEN} z-20 py-2 text-left font-semibold`}>Generación</th>
+                    <th className={`${FIJA_CAU} z-20 py-2 text-right font-semibold`}>Causado</th>
                     {mat.cols.map((c) => (
                       <th key={c} className="whitespace-nowrap px-2 py-2 text-right font-semibold">
                         {fmtMes(c)}
                       </th>
                     ))}
-                    <th className="px-2 py-2 text-right font-semibold">Recaudado</th>
-                    <th className="px-2 py-2 text-right font-semibold">%</th>
+                    <th className={`${FIJA_REC} z-20 py-2 text-right font-semibold`}>Recaudado</th>
+                    <th className={`${FIJA_PCT} z-20 py-2 text-right font-semibold`}>%</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cons.map((r) => (
                     <tr key={r.mes} className="border-t border-gray-100">
-                      <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-2 py-1.5 font-semibold text-gray-800">
+                      <td className={`${FIJA_GEN} z-10 py-1.5 font-semibold text-gray-800`}>
                         {fmtMesLargo(r.mes)}
                       </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-gray-700">{fmtM(r.causado)}</td>
+                      <td className={`${FIJA_CAU} z-10 py-1.5 text-right tabular-nums text-gray-700`}>{fmtM(r.causado)}</td>
                       {mat.cols.map((c) => {
                         const cell = mat.map.get(`${r.mes}|${c}`)
                         const alpha = cell ? 0.08 + 0.55 * (cell.valor / (mat.max || 1)) : 0
@@ -343,8 +350,8 @@ export default function RecaudoDashboard({
                           </td>
                         )
                       })}
-                      <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-gray-900">{fmtM(r.recaudado)}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-gray-700">{r.pct == null ? '—' : fmtPct(r.pct)}</td>
+                      <td className={`${FIJA_REC} z-10 py-1.5 text-right font-semibold tabular-nums text-gray-900`}>{fmtM(r.recaudado)}</td>
+                      <td className={`${FIJA_PCT} z-10 py-1.5 text-right tabular-nums text-gray-700`}>{r.pct == null ? '—' : fmtPct(r.pct)}</td>
                     </tr>
                   ))}
                 </tbody>
