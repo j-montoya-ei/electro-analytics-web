@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
+import { leerTodo } from '@/lib/supabase/leerTodo'
 import RegistrarIngresoRecaudo, { type IngresoRow } from '@/components/RegistrarIngresoRecaudo'
 import RecaudoDashboard, {
   type ConsolidadoRow,
@@ -20,38 +21,16 @@ import RecaudoDashboard, {
 
 export const dynamic = 'force-dynamic'
 
-type Sb = Awaited<ReturnType<typeof createClient>>
-
-// PostgREST corta en 1000 filas por petición (límite de Supabase). La cartera
-// (entidades × meses) y la conciliación crecen cada mes → se leen por páginas.
-async function leerTodo<T>(
-  supabase: Sb,
-  vista: string,
-  orden: string,
-): Promise<{ data: T[]; error: { message: string } | null }> {
-  const PAGINA = 1000
-  const out: T[] = []
-  for (let desde = 0; ; desde += PAGINA) {
-    const { data, error } = await supabase
-      .from(vista)
-      .select('*')
-      .order(orden, { ascending: true })
-      .range(desde, desde + PAGINA - 1)
-    if (error) return { data: out, error }
-    out.push(...((data ?? []) as T[]))
-    if (!data || data.length < PAGINA) return { data: out, error: null }
-  }
-}
-
 export default async function RecaudoPage() {
   const supabase = await createClient()
 
+  // Por páginas (Supabase corta en 1000 filas); orden único por vista.
   const [consRes, matRes, carRes, conRes, disRes, ingRes] = await Promise.all([
-    leerTodo<ConsolidadoRow>(supabase, 'vw_recaudo_consolidado', 'mes'),
-    leerTodo<MatrizRow>(supabase, 'vw_recaudo_matriz', 'mes_gen'),
-    leerTodo<CarteraRow>(supabase, 'vw_recaudo_cartera', 'mes'),
-    leerTodo<ConciliacionRow>(supabase, 'vw_recaudo_conciliacion', 'mes'),
-    leerTodo<DisputaRow>(supabase, 'vw_recaudo_disputa', 'entidad'),
+    leerTodo<ConsolidadoRow>(supabase, 'vw_recaudo_consolidado', ['mes']),
+    leerTodo<MatrizRow>(supabase, 'vw_recaudo_matriz', ['mes_gen', 'mes_pago']),
+    leerTodo<CarteraRow>(supabase, 'vw_recaudo_cartera', ['mes', 'entidad']),
+    leerTodo<ConciliacionRow>(supabase, 'vw_recaudo_conciliacion', ['mes', 'entidad']),
+    leerTodo<DisputaRow>(supabase, 'vw_recaudo_disputa', ['entidad']),
     supabase
       .from('recaudo_ingresos')
       .select('id, mes, entidad, valor, observacion, created_at')
