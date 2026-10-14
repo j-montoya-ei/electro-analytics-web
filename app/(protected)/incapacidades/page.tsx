@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
+import { leerTodo } from '@/lib/supabase/leerTodo'
 import CargarIncapacidadesBoton from '@/components/CargarIncapacidadesBoton'
 import IncapacidadesDashboard, {
   type IncapacidadRow,
@@ -19,16 +20,14 @@ export default async function IncapacidadesPage() {
   const supabase = await createClient()
 
   const [incap, planta] = await Promise.all([
-    supabase
-      .from('vw_incapacidades')
-      .select('*')
-      .order('mes_num', { ascending: true })
-      .limit(5000),
+    // Por páginas: Supabase corta en 1000 filas y con varios años se supera.
+    // Orden único (anio, id_incapacidad); el tablero ordena por mes por su cuenta.
+    leerTodo<IncapacidadRow>(supabase, 'vw_incapacidades', ['anio', 'id_incapacidad']),
     // Plantilla activa para la proporción por año (si falla, queda null).
     supabase.from('vw_caracterizacion').select('*', { count: 'exact', head: true }),
   ])
 
-  const rows = (incap.data ?? []) as IncapacidadRow[]
+  const rows = incap.data
   const plantilla = planta.count ?? null
 
   return (
