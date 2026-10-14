@@ -65,6 +65,8 @@ export type Row = {
   estado: string | null
   nro_dias: number | string | null
   total_incapacidad: number | string | null
+  valor_tnl: number | string | null
+  valor_cia_3dias: number | string | null
   valor_pendiente_cobrar: number | string | null
   // De vw_incapacidades: solo el año en curso se compara con la plantilla
   // activa de hoy (la plantilla de años anteriores no está disponible).
@@ -85,7 +87,8 @@ type CobrarEnt = {
 }
 
 // Métricas agregadas por categoría (cargo, proceso, entidad, diagnóstico…)
-type Cat = { name: string; incap: number; dias: number; valor: number }
+// valor = TOTAL INC = tnl (paga la EPS/ARL) + cia (asume la empresa)
+type Cat = { name: string; incap: number; dias: number; valor: number; tnl: number; cia: number }
 
 type Dim = 'proceso' | 'unidad' | 'cargo' | 'diagnostico'
 const DIM_LABEL: Record<Dim, string> = {
@@ -299,7 +302,7 @@ export default function IncapacidadesGraficos({
             <BarrasH data={porDx} color="#2563EB" metric="incap" />
           </Panel>
 
-          <Panel titulo="Por entidad" nota="incapacidades · valor">
+          <Panel titulo="Por entidad" nota="nº de incapacidades · valor en el detalle">
             <Alto>
               <BarChart data={porEntidad} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
@@ -311,9 +314,16 @@ export default function IncapacidadesGraficos({
                     const d = p.payload?.[0]?.payload as Cat | undefined
                     if (!p.active || !d) return null
                     return (
-                      <TipBox title={d.name}>
-                        {d.incap} incap. · {fmtCOP(d.valor)}
-                      </TipBox>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
+                        <p className="mb-1 font-semibold text-gray-900">
+                          {d.name} · {d.incap} incap. · {d.dias} días
+                        </p>
+                        <p className="text-gray-900">
+                          Valor total: <strong>{fmtCOP(d.valor)}</strong>
+                        </p>
+                        <p className="text-[#00369C]">Paga la EPS/ARL (TNL): {fmtCOP(d.tnl)}</p>
+                        <p className="text-[#B45309]">Asume la empresa (3 días): {fmtCOP(d.cia)}</p>
+                      </div>
                     )
                   }}
                 />
@@ -497,10 +507,12 @@ function metricasPor(rows: Row[], key: (r: Row) => string, sortBy: 'dias' | 'inc
   const m = new Map<string, Cat>()
   for (const r of rows) {
     const k = key(r)
-    const c = m.get(k) ?? { name: k, incap: 0, dias: 0, valor: 0 }
+    const c = m.get(k) ?? { name: k, incap: 0, dias: 0, valor: 0, tnl: 0, cia: 0 }
     c.incap += 1
     c.dias += num(r.nro_dias)
     c.valor += num(r.total_incapacidad)
+    c.tnl += num(r.valor_tnl)
+    c.cia += num(r.valor_cia_3dias)
     m.set(k, c)
   }
   return [...m.values()].sort((a, b) => b[sortBy] - a[sortBy])

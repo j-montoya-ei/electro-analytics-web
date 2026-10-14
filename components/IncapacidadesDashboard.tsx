@@ -34,6 +34,7 @@ import {
   BadgeCheck,
   Banknote,
   HandCoins,
+  Building2,
   RotateCcw,
   ArrowUpRight,
   ArrowDownRight,
@@ -87,7 +88,10 @@ export type IncapacidadRow = {
   entidad_norm: string
   estado: string | null
   nro_dias: number | string | null
+  // TOTAL INC = VALOR TNL (paga la EPS/ARL) + VALOR CIA. 3 DIAS (asume la empresa)
   total_incapacidad: number | string | null
+  valor_tnl: number | string | null
+  valor_cia_3dias: number | string | null
   valor_pendiente_cobrar: number | string | null
   radicada: boolean
   radicada_a_tiempo: boolean
@@ -110,7 +114,9 @@ type Kpis = {
   radicadas: number
   aTiempo: number
   pctATiempo: number | null // 0–100; null si no hay radicadas
-  costo: number
+  valorTotal: number // TOTAL INC
+  pagaEps: number // VALOR TNL
+  asumeEmpresa: number // VALOR CIA. 3 DIAS
   porCobrar: number
   nPorCobrar: number
 }
@@ -122,7 +128,9 @@ function calcKpis(rows: IncapacidadRow[]): Kpis {
   // Regla: % sobre radicadas (excluye "No aplica"), no sobre el total.
   const radicadas = rows.filter((r) => r.radicada).length
   const aTiempo = rows.filter((r) => r.radicada_a_tiempo).length
-  const costo = rows.reduce((s, r) => s + num(r.total_incapacidad), 0)
+  const valorTotal = rows.reduce((s, r) => s + num(r.total_incapacidad), 0)
+  const pagaEps = rows.reduce((s, r) => s + num(r.valor_tnl), 0)
+  const asumeEmpresa = rows.reduce((s, r) => s + num(r.valor_cia_3dias), 0)
   const porCobrar = rows.reduce((s, r) => s + num(r.valor_por_cobrar), 0)
   const nPorCobrar = rows.filter((r) => r.por_cobrar_tipo != null).length
   return {
@@ -135,7 +143,9 @@ function calcKpis(rows: IncapacidadRow[]): Kpis {
     radicadas,
     aTiempo,
     pctATiempo: radicadas > 0 ? Math.round((aTiempo / radicadas) * 100) : null,
-    costo,
+    valorTotal,
+    pagaEps,
+    asumeEmpresa,
   }
 }
 
@@ -319,14 +329,26 @@ export default function IncapacidadesDashboard({
               enPuntos
             />
             <KpiComparativo
-              label="Costo total"
+              label="Valor total incapacidades"
               tone="green"
               icon={<Banknote className="h-5 w-5" />}
               datos={kpisPorAnio.map(({ anio, k }) => ({
                 anio,
-                valor: k.costo,
-                texto: fmtCosto(k.costo),
-                detalle: fmtCOP(k.costo),
+                valor: k.valorTotal,
+                texto: fmtCosto(k.valorTotal),
+                detalle: `EPS/ARL ${fmtCosto(k.pagaEps)} · Empresa ${fmtCosto(k.asumeEmpresa)}`,
+              }))}
+              mejorSiBaja
+            />
+            <KpiComparativo
+              label="Asume la empresa"
+              tone="yellow"
+              icon={<Building2 className="h-5 w-5" />}
+              datos={kpisPorAnio.map(({ anio, k }) => ({
+                anio,
+                valor: k.asumeEmpresa,
+                texto: fmtCosto(k.asumeEmpresa),
+                detalle: `${fmtCOP(k.asumeEmpresa)} · primeros días`,
               }))}
               mejorSiBaja
             />
@@ -354,8 +376,8 @@ export default function IncapacidadesDashboard({
       ) : (
         <>
           {/* KPIs de un solo año */}
-          {/* 2 cols · 3 (≥672px) · 4 (≥992px) · 7 en una fila solo si caben (≥1760px) */}
-          <div className="grid grid-cols-2 gap-4 @2xl:grid-cols-3 @[62rem]:grid-cols-4 @[110rem]:grid-cols-7">
+          {/* 8 tarjetas: 2 cols · 4 (≥992px) → 4 + 4 */}
+          <div className="grid grid-cols-2 gap-4 @[62rem]:grid-cols-4">
             <KpiCard label="Incapacidades" value={fmtNum(kpis.incap)} tone="blue" icon={<Stethoscope className="h-5 w-5" />} />
             <KpiCard label="Días acumulados" value={fmtNum(kpis.dias)} tone="red" icon={<CalendarDays className="h-5 w-5" />} />
             <KpiCard label="Prom. días / incap." value={kpis.prom} tone="yellow" icon={<Gauge className="h-5 w-5" />} />
@@ -366,7 +388,8 @@ export default function IncapacidadesDashboard({
               tone="green"
               icon={<BadgeCheck className="h-5 w-5" />}
             />
-            <KpiCard label="Costo total" value={fmtCosto(kpis.costo)} tone="green" icon={<Banknote className="h-5 w-5" />} />
+            <KpiCard label="Valor total incapacidades" value={fmtCosto(kpis.valorTotal)} tone="green" icon={<Banknote className="h-5 w-5" />} />
+            <KpiCard label="Asume la empresa" value={fmtCosto(kpis.asumeEmpresa)} tone="yellow" icon={<Building2 className="h-5 w-5" />} />
             <KpiCard label="Por cobrar" value={fmtCosto(kpis.porCobrar)} tone="red" icon={<HandCoins className="h-5 w-5" />} />
           </div>
 
