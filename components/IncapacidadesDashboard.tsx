@@ -364,7 +364,7 @@ export default function IncapacidadesDashboard({
               }))}
               // Saldo a hoy (lo que falta cobrar), no un flujo del año:
               // la variación entre años no es comparable → se muestra nota.
-              nota="Saldo pendiente a hoy · no comparable entre años"
+              nota="Saldo a hoy. 2025 ya tuvo tiempo de cobrarse; por eso no se compara."
             />
           </div>
 
