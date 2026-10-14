@@ -2,15 +2,16 @@
 // Página Recaudo — módulo completo (tablas a + b + c).
 // Server Component: lee vw_recaudo_mensual, vw_recaudo_por_mes_pago,
 // vw_cartera_por_entidad y vw_cartera_por_corte; calcula KPIs y
-// delega los gráficos a RecaudoGraficos. Tres botones de carga.
+// delega los gráficos a RecaudoGraficos.
+// Paso 2 (oct-2026): los 3 botones de carga se reemplazan por
+// "Registrar ingreso". El cuerpo se rehace en el paso 3 sobre las
+// vistas vw_recaudo_* (calculadas desde la base de incapacidades).
 //
 // Ubicación: app/(protected)/recaudo/page.tsx
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@/lib/supabase/server'
-import CargarCausadoMensualBoton from '@/components/CargarCausadoMensualBoton'
-import CargarRecaudoPagosBoton from '@/components/CargarRecaudoPagosBoton'
-import CargarCarteraEpsBoton from '@/components/CargarCarteraEpsBoton'
+import RegistrarIngresoRecaudo, { type IngresoRow } from '@/components/RegistrarIngresoRecaudo'
 import RecaudoGraficos, {
   type RecaudoMensualRow,
   type RecaudoPagoRow,
@@ -32,6 +33,25 @@ const fmtPct = (frac: number) => `${(frac * 100).toFixed(1)}%`
 
 export default async function RecaudoPage() {
   const supabase = await createClient()
+
+  // Paso 2 (nuevo recaudo): ingresos digitados + entidades de la base para el formulario
+  const [ingresosRes, entidadesRes] = await Promise.all([
+    supabase
+      .from('recaudo_ingresos')
+      .select('id, mes, entidad, valor, observacion, created_at')
+      .order('mes', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(5000),
+    supabase.from('vw_recaudo_base').select('entidad').limit(5000),
+  ])
+  const ingresos = (ingresosRes.data ?? []) as IngresoRow[]
+  const entidades = [
+    ...new Set(
+      ((entidadesRes.data ?? []) as { entidad: string }[])
+        .map((r) => r.entidad)
+        .filter((e) => e && e !== '(sin entidad)'),
+    ),
+  ].sort((a, b) => a.localeCompare(b, 'es'))
 
   const [mensualRes, pagoRes, entidadRes, corteRes] = await Promise.all([
     supabase.from('vw_recaudo_mensual').select('*').order('mes_generacion', { ascending: true }).limit(5000),
@@ -64,9 +84,12 @@ export default async function RecaudoPage() {
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
-          <CargarCausadoMensualBoton />
-          <CargarRecaudoPagosBoton />
-          <CargarCarteraEpsBoton />
+          <RegistrarIngresoRecaudo entidades={entidades} ingresos={ingresos} />
+          {(ingresosRes.error || entidadesRes.error) && (
+            <p className="text-xs text-red-600">
+              {(ingresosRes.error ?? entidadesRes.error)?.message}
+            </p>
+          )}
         </div>
       </div>
 
