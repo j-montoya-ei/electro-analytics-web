@@ -151,6 +151,31 @@ export default function RecaudoDashboard({
     return { causado, recaudado, pct: causado > 0 ? recaudado / causado : 0, banco, base, mesesConIngreso, carteraHoy, disp, nDisp }
   }, [cons, cartera, disputa, ultimoMesCartera])
 
+  // ── flujo por mes de pago ──
+  // Con "Todos": consolidado (pagado según base + ingreso al banco, por mes calendario).
+  // Con un año: solo los pagos de las incapacidades GENERADAS en ese año (suma de la
+  // matriz por mes de pago). El banco no se puede separar por año de la incapacidad,
+  // así que en ese modo no se muestra (evita diferencias falsas en la conciliación).
+  const conBanco = anio === TODOS
+  const flujo = useMemo(() => {
+    if (anio === TODOS)
+      return cons.map((r) => ({
+        mes: r.mes,
+        label: r.label,
+        pagadoBase: r.pagadoBase,
+        ingresoBanco: r.ingresoBanco,
+        nIngresos: r.nIngresos,
+      }))
+    const porMes = new Map<string, number>()
+    for (const r of matriz) {
+      if (anioDe(r.mes_gen) !== anio) continue
+      porMes.set(r.mes_pago, (porMes.get(r.mes_pago) ?? 0) + num(r.valor))
+    }
+    return [...porMes.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, v]) => ({ mes, label: fmtMes(mes), pagadoBase: v, ingresoBanco: 0, nIngresos: 0 }))
+  }, [anio, cons, matriz])
+
   // ── matriz (filas del año filtrado; columnas = meses de pago con dato) ──
   const mat = useMemo(() => {
     const filas = matriz.filter((r) => anio === TODOS || anioDe(r.mes_gen) === anio)
@@ -220,9 +245,11 @@ export default function RecaudoDashboard({
         />
         <Kpi
           label="Ingreso al banco (registrado)"
-          value={fmtM(kpi.banco)}
+          value={conBanco ? fmtM(kpi.banco) : '—'}
           detalle={
-            kpi.mesesConIngreso === 0
+            !conBanco
+              ? 'elige Año = Todos para ver el banco (no se separa por año de la incapacidad)'
+              : kpi.mesesConIngreso === 0
               ? 'aún no hay ingresos registrados'
               : `base ${fmtM(kpi.base)} · ${kpi.mesesConIngreso} mes(es) con registro`
           }
@@ -268,28 +295,37 @@ export default function RecaudoDashboard({
       </Seccion>
 
       {/* 3 · Flujo por mes de pago */}
-      <Seccion titulo="Flujo por mes (calendario)">
-        <Panel titulo="Pagado según la base vs ingreso al banco" nota="lo que la base marca como pagado en el mes · lo registrado del extracto">
+      <Seccion titulo="Flujo por mes de pago">
+        <Panel
+          titulo={conBanco ? 'Pagado según la base vs ingreso al banco' : `Pagado según la base · incapacidades de ${anio}`}
+          nota={
+            conBanco
+              ? 'lo que la base marca como pagado en el mes · lo registrado del extracto'
+              : 'cuánto se pagó cada mes de las incapacidades generadas en el año elegido'
+          }
+        >
           <Alto>
-            <BarChart data={cons} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
+            <BarChart data={flujo} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
               <XAxis dataKey="label" tick={tickX} axisLine={false} tickLine={false} interval="preserveStartEnd" />
               <YAxis tick={tickX} axisLine={false} tickLine={false} tickFormatter={(v) => fmtM(Number(v))} width={60} />
               <Tooltip
                 cursor={{ fill: 'rgba(0,54,156,0.04)' }}
                 content={(p: TooltipProps<number, string>) => {
-                  const d = p.payload?.[0]?.payload as (typeof cons)[number] | undefined
+                  const d = p.payload?.[0]?.payload as (typeof flujo)[number] | undefined
                   if (!p.active || !d) return null
                   const dif = d.ingresoBanco - d.pagadoBase
                   return (
                     <TipBox title={fmtMesLargo(d.mes)}>
                       <TipRow c={AZUL} k="Pagado según base" v={fmtCOP(d.pagadoBase)} />
-                      <TipRow
-                        c={TEAL}
-                        k="Ingreso al banco"
-                        v={d.nIngresos ? `${fmtCOP(d.ingresoBanco)} (${d.nIngresos} reg.)` : 'sin registrar'}
-                      />
-                      {d.nIngresos > 0 && (
+                      {conBanco && (
+                        <TipRow
+                          c={TEAL}
+                          k="Ingreso al banco"
+                          v={d.nIngresos ? `${fmtCOP(d.ingresoBanco)} (${d.nIngresos} reg.)` : 'sin registrar'}
+                        />
+                      )}
+                      {conBanco && d.nIngresos > 0 && (
                         <TipRow c={dif === 0 ? '#9CA3AF' : '#DC2626'} k="Diferencia banco − base" v={fmtCOP(dif)} />
                       )}
                     </TipBox>
@@ -298,9 +334,17 @@ export default function RecaudoDashboard({
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="pagadoBase" name="Pagado según base" fill={AZUL} radius={[3, 3, 0, 0]} maxBarSize={22} />
-              <Bar dataKey="ingresoBanco" name="Ingreso al banco" fill={TEAL} radius={[3, 3, 0, 0]} maxBarSize={22} />
+              {conBanco && (
+                <Bar dataKey="ingresoBanco" name="Ingreso al banco" fill={TEAL} radius={[3, 3, 0, 0]} maxBarSize={22} />
+              )}
             </BarChart>
           </Alto>
+          {!conBanco && (
+            <p className="mt-2 text-xs text-gray-400">
+              El ingreso al banco no se puede separar por año de la incapacidad (al banco entran pagos de
+              cualquier año). Para conciliar contra el banco elige Año = Todos.
+            </p>
+          )}
         </Panel>
       </Seccion>
 
