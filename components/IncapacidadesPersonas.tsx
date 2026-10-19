@@ -80,8 +80,8 @@ export default function IncapacidadesPersonas({ rows }: { rows: Row[] }) {
       <section className="space-y-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">Personas</p>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Ranking titulo="Más incapacidades" nota="en el período filtrado" data={masIncap} />
-          <Ranking titulo="Más días de incapacidad" nota="en el período filtrado" data={masDias} />
+          <Ranking titulo="Más incapacidades" nota="en el período filtrado" data={masIncap} principal="incap" />
+          <Ranking titulo="Más días de incapacidad" nota="en el período filtrado" data={masDias} principal="dias" />
         </div>
       </section>
 
@@ -123,11 +123,15 @@ function Ranking({
   titulo,
   nota,
   data,
+  principal,
 }: {
   titulo: string
   nota: string
   data: Persona[]
+  /** Métrica por la que se ordena la tabla: se muestra en negrilla. */
+  principal: 'incap' | 'dias'
 }) {
+  const fmtIncap = (n: number) => `${n} ${n === 1 ? 'incap.' : 'incaps.'}`
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm">
       <div className="flex items-baseline justify-between border-b border-gray-200 px-5 py-3">
@@ -152,8 +156,12 @@ function Ranking({
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <span className="text-sm font-semibold text-gray-900">{p.incap}</span>
-                <span className="ml-2 text-xs text-gray-400">{p.dias} d</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {principal === 'dias' ? `${p.dias} d` : fmtIncap(p.incap)}
+                </span>
+                <span className="ml-2 text-xs text-gray-400">
+                  {principal === 'dias' ? fmtIncap(p.incap) : `${p.dias} d`}
+                </span>
               </div>
             </li>
           ))}
