@@ -10,7 +10,7 @@
 //     (los demás años quedan intactos)
 //   - limpia la cédula (deja solo dígitos)
 //   - descarta filas sin ID INC o sin cédula (y las reporta)
-//   - rechaza el archivo si hay ID INC repetidos o filas sin
+//   - rechaza el archivo si hay ID INC repetidos o filas sin 
 //     Fecha Inicial
 //   - normaliza PRORROGA ('SI' -> 'Si', 'NO' -> 'No')
 //
