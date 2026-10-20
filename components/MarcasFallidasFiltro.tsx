@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Filtro de periodo para Marcas fallidas (client component)
-// Mismo patrón que LlegadasTardeFiltro / HorasExtrasFiltro.
-//
-// Ubicación: components/MarcasFallidasFiltro.tsx
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -14,7 +8,6 @@ import { CalendarDays, Check, History, RotateCcw } from 'lucide-react'
 const pad = (n: number) => String(n).padStart(2, '0')
 const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-// "Hoy" en horario Colombia
 function bogotaHoy() {
   const now = new Date()
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
