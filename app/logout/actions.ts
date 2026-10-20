@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Server Action - Cierre de sesión
-// Borra la sesión de Supabase y redirige al login
-// ═══════════════════════════════════════════════════════════
 
 'use server'
 
