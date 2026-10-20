@@ -38,7 +38,6 @@ const LABELS = {
 
 type Campo = keyof typeof LABELS
 
-// Campos que el RPC castea a date. El resto se envían como texto.
 const CAMPOS_FECHA: Campo[] = [
   'fecha_inicial',
   'fecha_final',
@@ -46,8 +45,7 @@ const CAMPOS_FECHA: Campo[] = [
   'fecha_pago',
 ]
 
-// Campos numéricos/enteros. Se envían como texto numérico limpio; el RPC
-// castea (::numeric / ::int).
+
 const CAMPOS_NUMERO: Campo[] = [
   'nro_dias',
   'valor_ibc',
@@ -59,8 +57,6 @@ const CAMPOS_NUMERO: Campo[] = [
   'valor_pendiente_cobrar',
 ]
 
-// Encabezado normalizado: sin tildes, mayúsculas, espacios simples.
-// Así 'Nro.DÍAS', 'NRO.DIAS' o 'Nro.Días ' se reconocen igual.
 const norm = (v: unknown): string =>
   String(v ?? '')
     .normalize('NFD')
@@ -69,10 +65,7 @@ const norm = (v: unknown): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
-// Fecha → 'YYYY-MM-DD'. Con cellDates:true los valores de fecha llegan como
-// Date en UTC medianoche. Si viniera texto 'DD-MM-YYYY' se reordena; si ya
-// viene 'YYYY-MM-DD' se respeta. Cualquier otro texto (p.ej. el marcador
-// '-' de "sin dato" del reporte) → null, para no romper el cast ::date.
+
 const fmtFecha = (v: unknown): string | null => {
   if (v == null) return null
   if (v instanceof Date) return v.toISOString().slice(0, 10)
@@ -84,10 +77,7 @@ const fmtFecha = (v: unknown): string | null => {
   return null
 }
 
-// Número → texto numérico limpio. Con raw:true las celdas numéricas llegan
-// como number → String() no introduce separador de miles. Un texto solo se
-// acepta si es un número válido (con signo/decimales); cualquier otra cosa
-// (p.ej. el marcador ' - ' de "sin dato") → null, para no romper el cast.
+
 const num = (v: unknown): string | null => {
   if (v == null) return null
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null
@@ -96,14 +86,12 @@ const num = (v: unknown): string | null => {
   return /^-?\d+(\.\d+)?$/.test(s) ? s : null
 }
 
-// Texto → trim, null si queda vacío.
 const txt = (v: unknown): string | null =>
   v == null ? null : String(v).trim() || null
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
 
-  // 1) Autenticación (el RPC exige rol authenticated; verificamos aquí también)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -111,7 +99,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
-  // 2) Recibir archivo (.xls o .xlsx)
   let file: File | null = null
   try {
     const form = await request.formData()
@@ -128,13 +115,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'El archivo debe ser .xls o .xlsx' }, { status: 400 })
   }
 
-  // 3) Parsear y extraer filas
   let filas: Array<Record<string, string | null>>
   try {
     const buf = Buffer.from(await file.arrayBuffer())
     const wb = XLSX.read(buf, { cellDates: true })
 
-    // Preferir la hoja 'Incapacidades'; si no existe, usar la primera.
     const nombreHoja =
       wb.SheetNames.find((n) => n.trim().toLowerCase() === 'incapacidades') ??
       wb.SheetNames[0]
@@ -149,7 +134,6 @@ export async function POST(request: NextRequest) {
       defval: null,
     })
 
-    // Localizar la fila de encabezados por la etiqueta 'ID INC'
     const claveId = norm(LABELS.id_incapacidad)
     const hIdx = rows.findIndex(
       (r) => Array.isArray(r) && r.some((c) => norm(c) === claveId),
@@ -172,7 +156,6 @@ export async function POST(request: NextRequest) {
       ]),
     ) as Record<Campo, number>
 
-    // Todas las columnas son obligatorias (la carga reemplaza el año completo)
     const faltantes = (Object.keys(LABELS) as Campo[]).filter((k) => idx[k] === -1)
     if (faltantes.length) {
       return NextResponse.json(
@@ -185,7 +168,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Selector de formateo por campo.
     const fecha = new Set<Campo>(CAMPOS_FECHA)
     const numero = new Set<Campo>(CAMPOS_NUMERO)
     const formatear = (k: Campo, v: unknown): string | null =>
@@ -194,7 +176,6 @@ export async function POST(request: NextRequest) {
     filas = []
     for (const r of rows.slice(hIdx + 1)) {
       if (!Array.isArray(r)) continue
-      // Fila totalmente vacía → se ignora (no cuenta como descartada)
       if (r.every((c) => c == null || String(c).trim() === '')) continue
 
       const fila: Record<string, string | null> = {}
@@ -214,13 +195,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 4) Cargar vía RPC (reemplazo total del año, en una transacción)
   const { data, error } = await supabase.rpc('fn_cargar_incapacidades', {
     p_filas: filas,
   })
   if (error) {
-    // Los RAISE EXCEPTION del RPC traen mensajes pensados para el usuario
-    // (años mezclados, ID repetidos, filas sin Fecha Inicial).
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
