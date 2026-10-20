@@ -1,11 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Botón "Cargar marcas fallidas" (client component)
-// Sube el reporte "Intentos de Marcaje" (.xls/.xlsx) a
-// /api/marcas-fallidas/cargar, muestra el resumen y refresca.
-//
-// Ubicación: components/CargarMarcasFallidasBoton.tsx
-// ═══════════════════════════════════════════════════════════
-
 'use client'
 
 import { useRef, useState } from 'react'
@@ -29,7 +21,7 @@ export default function CargarMarcasFallidasBoton() {
 
   async function onArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    e.target.value = '' // permite volver a subir el mismo archivo
+    e.target.value = '' 
     if (!file) return
 
     setCargando(true)
