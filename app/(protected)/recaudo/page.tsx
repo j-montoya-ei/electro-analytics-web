@@ -1,13 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Recaudo (nuevo · oct-2026)
-// Todo se calcula desde la base de incapacidades (vistas vw_recaudo_*),
-// desde ene-2025. Lo único que se digita es el ingreso al banco
-// (botón "Registrar ingreso" → recaudo_ingresos).
-// Server Component: lee las vistas y delega a RecaudoDashboard.
-//
-// Ubicación: app/(protected)/recaudo/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import { leerTodo } from '@/lib/supabase/leerTodo'
 import RegistrarIngresoRecaudo, { type IngresoRow } from '@/components/RegistrarIngresoRecaudo'
@@ -24,7 +14,6 @@ export const dynamic = 'force-dynamic'
 export default async function RecaudoPage() {
   const supabase = await createClient()
 
-  // Por páginas (Supabase corta en 1000 filas); orden único por vista.
   const [consRes, matRes, carRes, conRes, disRes, ingRes] = await Promise.all([
     leerTodo<ConsolidadoRow>(supabase, 'vw_recaudo_consolidado', ['mes']),
     leerTodo<MatrizRow>(supabase, 'vw_recaudo_matriz', ['mes_gen', 'mes_pago']),
@@ -41,7 +30,6 @@ export default async function RecaudoPage() {
 
   const error = consRes.error ?? matRes.error ?? carRes.error ?? conRes.error ?? disRes.error ?? ingRes.error
 
-  // Entidades del formulario = las que existen en la base (vienen en la cartera)
   const entidades = [...new Set(carRes.data.map((r) => r.entidad).filter((e) => e && e !== '(sin entidad)'))].sort(
     (a, b) => a.localeCompare(b, 'es'),
   )
