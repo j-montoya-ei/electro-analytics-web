@@ -1,10 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Inasistencias - KPIs + tabla enriquecida desde vw_inasistencias
-// La lógica de cruce (cargo + turno dominante) vive en la vista SQL.
-// El frontend solo lee y presenta.
-// Ubicación: app/(protected)/inasistencias/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import DataTable from '@/components/DataTable'
 import KpiCard from '@/components/KpiCard'
