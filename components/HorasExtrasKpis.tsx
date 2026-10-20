@@ -4,7 +4,6 @@ import { useMemo } from 'react'
 import { AlertTriangle, Banknote, Clock3, Medal, Timer, Users } from 'lucide-react'
 import { fmtHorasMin } from '@/lib/formatHoras'
 
-// Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type FilaHorasExtras = {
   dni: string
   nombre_completo: string | null
@@ -16,7 +15,6 @@ type FilaHorasExtras = {
   sin_salario: boolean
 }
 
-// "2 h 13 min" (redondeado al minuto)
 const fmtHoras = fmtHorasMin
 
 function fmtCOP(v: number): string {
@@ -31,15 +29,11 @@ export default function HorasExtrasKpis({ data }: { data: FilaHorasExtras[] }) {
     const sinSalario = data.filter((f) => f.sin_salario).length
     const enAlerta = data.filter((f) => (f.meses_supera_48h ?? 0) > 0).length
 
-    // Top colaborador por horas extra reales
     let top: FilaHorasExtras | null = null
     for (const f of data) {
       if (!top || f.horas_extra_reales > top.horas_extra_reales) top = f
     }
 
-    // Proceso con más horas extra: suma directa por proceso (el que más consume).
-    // A diferencia de tardanzas, aquí el indicador de GH es el TOTAL, no el
-    // promedio, así que no se aplica umbral mínimo.
     const porProceso = new Map<string, { horas: number; costo: number }>()
     for (const f of data) {
       const p = f.proceso ?? '—'
