@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// CaracterizacionGraficos — gráficos del módulo de caracterización
-// Client Component (Recharts corre en el navegador).
-// Recibe las distribuciones YA contadas desde la página (server).
-// Ubicación: components/CaracterizacionGraficos.tsx
-// ═══════════════════════════════════════════════════════════
 'use client'
 
 import type { ReactNode } from 'react'
@@ -15,7 +9,6 @@ import {
 
 type Conteo = { label: string; value: number }
 
-// ─── Colores corporativos + variaciones del azul para series largas ─────
 const AZUL = '#00369C'
 const GRIS = '#A4A8AB'
 const PALETA = [
@@ -23,7 +16,6 @@ const PALETA = [
   '#001E5C', '#8AA9E6', '#0A4FD1', '#6B7B8C', '#B8CFF2',
 ]
 
-// "Sin dato" siempre gris; el resto entra por la paleta.
 function colorDe(label: string, i: number, mono = false): string {
   if (label === 'Sin dato') return GRIS
   if (mono) return AZUL
@@ -33,7 +25,6 @@ function colorDe(label: string, i: number, mono = false): string {
 const pct = (n: number, total: number) =>
   total > 0 ? Math.round((n / total) * 100) : 0
 
-// ─── Contenedor de tarjeta (mismo estilo que el resto de la app) ────────
 function Panel({
   titulo,
   children,
@@ -56,7 +47,6 @@ function Panel({
   )
 }
 
-// ─── Anillo (dona con hueco) — para 2–5 categorías ──────────────────────
 function Anillo({ datos, total }: { datos: Conteo[]; total: number }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
@@ -87,7 +77,6 @@ function Anillo({ datos, total }: { datos: Conteo[]; total: number }) {
   )
 }
 
-// ─── Barras verticales (histograma) — mono azul, orden natural ──────────
 function BarrasVert({
   datos,
   total,
@@ -117,7 +106,6 @@ function BarrasVert({
   )
 }
 
-// ─── Barras horizontales — paleta variada, alto según nº de categorías ──
 function BarrasHoriz({
   datos,
   total,
@@ -157,7 +145,6 @@ function BarrasHoriz({
   )
 }
 
-// ─── Componente principal: arma la cuadrícula mezclada ──────────────────
 export default function CaracterizacionGraficos({
   total,
   genero,
