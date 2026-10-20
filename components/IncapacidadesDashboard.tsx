@@ -1,24 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// IncapacidadesDashboard (client component)
-// Recibe todas las filas de vw_incapacidades y arma el tablero:
-// filtros reactivos (Año · Mes · Clase · Cargo · Entidad) + KPIs.
-//
-// Segmentador de Año:
-//   · Un año elegido  → todo el tablero muestra solo ese año
-//                       (KPIs + gráficas + personas, como antes).
-//   · "Todos"         → MODO COMPARACIÓN: KPIs con un valor por año y
-//                       la variación del último año vs el anterior.
-//                       Toggle "Mismo período / Año completo": el corte
-//                       viene resuelto desde la vista (en_mismo_periodo).
-//                       El detalle (gráficas, rankings, alertas) NO se
-//                       muestra mezclando años: las alertas por persona
-//                       sumarían años distintos y serían falsas.
-//
-// Filtra y agrega en memoria (patrón Caracterización). Las reglas de
-// negocio vienen resueltas como flags desde la vista SQL.
-//
-// Ubicación: components/IncapacidadesDashboard.tsx
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -47,7 +26,6 @@ const TODOS = ''
 const norm = (v: string | null | undefined): string =>
   v == null || v.trim() === '' ? SIN_DATO : v.trim()
 
-// numeric de Postgres llega como string por PostgREST → coerción segura.
 const num = (v: number | string | null | undefined): number => {
   const n = typeof v === 'number' ? v : v == null ? 0 : Number(v)
   return Number.isFinite(n) ? n : 0
@@ -65,7 +43,6 @@ const fmtCOP = (n: number) =>
 
 const fmtNum = (n: number) => new Intl.NumberFormat('es-CO').format(n)
 
-// 'YYYY-MM-DD' → '8 oct' (sin pasar por Date para no correr el día por zona horaria)
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const fmtDiaMes = (iso: string | null): string => {
   if (!iso) return '—'
@@ -88,24 +65,19 @@ export type IncapacidadRow = {
   entidad_norm: string
   estado: string | null
   nro_dias: number | string | null
-  // TOTAL INC = VALOR TNL (paga la EPS/ARL) + VALOR CIA. 3 DIAS (asume la empresa)
   total_incapacidad: number | string | null
   valor_tnl: number | string | null
   valor_cia_3dias: number | string | null
   valor_pendiente_cobrar: number | string | null
   radicada: boolean
   radicada_a_tiempo: boolean
-  // Comparativo (vw_incapacidades)
   fecha_corte: string | null
   en_mismo_periodo: boolean
   es_anio_en_curso: boolean
-  // Por cobrar (regla en vw_incapacidades): Radicada → valor_tnl;
-  // Derecho Petición → valor_pendiente_cobrar; otros → 0
   por_cobrar_tipo: string | null
   valor_por_cobrar: number | string | null
 }
 
-// ── KPIs de un conjunto de filas ──────────────────────────────────
 type Kpis = {
   incap: number
   dias: number
@@ -113,10 +85,10 @@ type Kpis = {
   trabajadores: number
   radicadas: number
   aTiempo: number
-  pctATiempo: number | null // 0–100; null si no hay radicadas
-  valorTotal: number // TOTAL INC
-  pagaEps: number // VALOR TNL
-  asumeEmpresa: number // VALOR CIA. 3 DIAS
+  pctATiempo: number | null 
+  valorTotal: number 
+  pagaEps: number 
+  asumeEmpresa: number 
   porCobrar: number
   nPorCobrar: number
 }
@@ -125,7 +97,6 @@ function calcKpis(rows: IncapacidadRow[]): Kpis {
   const incap = rows.length
   const dias = rows.reduce((s, r) => s + num(r.nro_dias), 0)
   const trabajadores = new Set(rows.map((r) => r.dni)).size
-  // Regla: % sobre radicadas (excluye "No aplica"), no sobre el total.
   const radicadas = rows.filter((r) => r.radicada).length
   const aTiempo = rows.filter((r) => r.radicada_a_tiempo).length
   const valorTotal = rows.reduce((s, r) => s + num(r.total_incapacidad), 0)
@@ -165,7 +136,6 @@ export default function IncapacidadesDashboard({
   const [cargo, setCargo] = useState(TODOS)
   const [entidad, setEntidad] = useState(TODOS)
 
-  // Años cargados (ascendente)
   const anios = useMemo(
     () =>
       [...new Set(rows.map((r) => r.anio).filter((a): a is number => a != null))].sort(
@@ -175,19 +145,16 @@ export default function IncapacidadesDashboard({
   )
   const fechaCorte = rows[0]?.fecha_corte ?? null
 
-  // Comparación solo si hay 2+ años y no se eligió uno
   const comparando = anio === TODOS && anios.length > 1
 
-  // Base según año y período (antes de los demás filtros)
   const base = useMemo(() => {
     if (anio !== TODOS) return rows.filter((r) => String(r.anio) === anio)
     if (comparando && periodo === 'mismo') return rows.filter((r) => r.en_mismo_periodo)
     return rows
   }, [rows, anio, comparando, periodo])
 
-  // Opciones de cada filtro (derivadas de la base vigente)
   const opciones = useMemo(() => {
-    const mesesMap = new Map<string, number>() // label → mes_num (para ordenar por calendario)
+    const mesesMap = new Map<string, number>()
     const clases = new Set<string>()
     const cargos = new Set<string>()
     const entidades = new Set<string>()
@@ -203,7 +170,6 @@ export default function IncapacidadesDashboard({
     return { meses, clases: asc(clases), cargos: asc(cargos), entidades: asc(entidades) }
   }, [base])
 
-  // Filtrado en memoria
   const filtradas = useMemo(
     () =>
       base.filter(
@@ -216,7 +182,6 @@ export default function IncapacidadesDashboard({
     [base, mes, clase, cargo, entidad],
   )
 
-  // KPIs: un bloque por año (comparación) o uno solo
   const kpisPorAnio = useMemo(
     () => anios.map((a) => ({ anio: a, k: calcKpis(filtradas.filter((r) => r.anio === a)) })),
     [anios, filtradas],
@@ -233,8 +198,6 @@ export default function IncapacidadesDashboard({
   }
 
   return (
-    // @container: las grillas de KPIs se acomodan al ANCHO REAL del tablero
-    // (cambia con el menú lateral expandido/minimizado/oculto), no al de la pantalla.
     <div className="@container space-y-6">
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 md:p-5">
@@ -362,8 +325,6 @@ export default function IncapacidadesDashboard({
                 texto: fmtCosto(k.porCobrar),
                 detalle: `${fmtCOP(k.porCobrar)} · ${k.nPorCobrar} incap.`,
               }))}
-              // Saldo a hoy (lo que falta cobrar), no un flujo del año:
-              // la variación entre años no es comparable → se muestra nota.
               nota="Saldo a hoy. 2025 ya tuvo tiempo de cobrarse; por eso no se compara."
             />
           </div>
@@ -409,7 +370,6 @@ export default function IncapacidadesDashboard({
   )
 }
 
-// ── Tarjeta comparativa: un valor por año + variación último vs anterior ──
 type Tone = 'blue' | 'yellow' | 'red' | 'green'
 const chip: Record<Tone, string> = {
   blue: 'bg-blue-50 text-[#00369C]',
@@ -437,11 +397,10 @@ function KpiComparativo({
   icon: ReactNode
   tone: Tone
   datos: { anio: number; valor: number | null; texto: string; detalle?: string }[]
-  mejorSiBaja?: boolean // true: subir es malo (rojo)
-  enPuntos?: boolean // true: variación en puntos porcentuales (para %)
-  nota?: string // si viene, reemplaza la variación (métricas no comparables)
+  mejorSiBaja?: boolean 
+  enPuntos?: boolean 
+  nota?: string 
 }) {
-  // Ordenado del más reciente al más antiguo
   const filas = [...datos].sort((a, b) => b.anio - a.anio)
   const [ult, ant] = filas
 
