@@ -1,37 +1,9 @@
-// ═══════════════════════════════════════════════════════════
-// POST /api/incapacidades/cargar
-// Recibe el libro INCAPACIDADES_BASE_<AÑO> (.xls o .xlsx), hoja
-// 'Incapacidades', extrae las filas y las carga vía RPC
-// fn_cargar_incapacidades.
-//
-// El RPC aplica las reglas de negocio (no este handler):
-//   - el año sale de FECHA INICIAL; un archivo = un solo año
-//   - REEMPLAZO TOTAL del año: borra ese año e inserta el archivo
-//     (los demás años quedan intactos)
-//   - limpia la cédula (deja solo dígitos)
-//   - descarta filas sin ID INC o sin cédula (y las reporta)
-//   - rechaza el archivo si hay ID INC repetidos o filas sin 
-//     Fecha Inicial
-//   - normaliza PRORROGA ('SI' -> 'Si', 'NO' -> 'No')
-//
-// Este handler exige que estén TODAS las columnas: como la carga
-// reemplaza el año completo, una columna faltante borraría ese dato
-// para todo el año.
-//
-// Ubicación: app/api/incapacidades/cargar/route.ts
-// ═══════════════════════════════════════════════════════════
-
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from '@e965/xlsx'
 import { createClient } from '@/lib/supabase/server'
 
-// El parseo de Excel usa Buffer → requiere runtime Node, no Edge.
 export const runtime = 'nodejs'
 
-// Encabezados del archivo INCAPACIDADES_BASE (verificados en 2025 y 2026).
-// Se localizan por nombre (no por posición). La comparación ignora
-// mayúsculas, tildes y espacios extra (ver norm()). La clave de cada
-// entrada es el nombre interno que espera el RPC (x->>'clave').
 const LABELS = {
   id_incapacidad: 'ID INC',
   dni: 'No ID',
