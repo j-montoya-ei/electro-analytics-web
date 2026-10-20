@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Cliente Supabase - Electro Analytics Web
-// Punto único de conexión entre la app y la base de datos
-// ═══════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js'
 
