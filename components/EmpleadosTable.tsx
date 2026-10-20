@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Componente EmpleadosTable - Tabla interactiva (cliente)
-// Buscador + orden por columna · se adapta al esquema real
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -10,12 +6,10 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
-// Convierte 'nombre_completo' → 'Nombre Completo'
 function prettifyHeader(key: string) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-// Formatea valores para mostrar en celda
 function formatValue(value: unknown) {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? 'Sí' : 'No'
