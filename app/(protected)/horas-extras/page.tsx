@@ -1,14 +1,8 @@
-// ═══════════════════════════════════════════════════════════
-// Página Horas extras - Acumulado por colaborador
-// Server Component: llama la función SQL por RPC y renderiza
-// Fuente única (v1): fn_horas_extras_por_colaborador(desde, hasta)
-// ═══════════════════════════════════════════════════════════
 import { createClient } from '@/lib/supabase/server'
 import HorasExtrasTable from '@/components/HorasExtrasTable'
 import HorasExtrasFiltro from '@/components/HorasExtrasFiltro'
 import HorasExtrasKpis from '@/components/HorasExtrasKpis'
 
-// Fecha actual en horario Colombia (mismo patrón que Llegadas tarde / Inasistencias)
 function bogotaNow() {
   const now = new Date()
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
@@ -21,21 +15,18 @@ export type FilaHorasExtras = {
   proceso: string
   unidad_negocio: string
   meses_con_he: number
-  // ─── Conceptos de hora extra (horas) ───
   he_diurna_ord: number
   he_nocturna: number
   he_diurna_domfes: number
   he_nocturna_domfes: number
-  // ─── Agregados (horas) ───
-  horas_extra_reales: number // 4 conceptos he_* — base del ranking y la alerta 48h
+  horas_extra_reales: number 
   total_recargos: number
-  total_horas: number // extras + recargos (para costo futuro)
-  meses_supera_48h: number // en cuántos meses del rango superó 48h
-  // ─── Costo (COP) ───
-  costo_he: number // costo de las 4 horas extra
-  costo_recargos: number // costo de los recargos (hoy 0: Buk no los registra)
-  costo_total: number // costo_he + costo_recargos
-  sin_salario: boolean // true = colaborador sin salario cargado → costo no contado
+  total_horas: number 
+  meses_supera_48h: number 
+  costo_he: number 
+  costo_recargos: number 
+  costo_total: number 
+  sin_salario: boolean 
 }
 
 export default async function HorasExtrasPage({
@@ -45,7 +36,6 @@ export default async function HorasExtrasPage({
 }) {
   const { desde: qDesde, hasta: qHasta } = await searchParams
 
-  // Rango por defecto: mes en curso (Colombia)
   const d = bogotaNow()
   const year = d.getFullYear()
   const month = d.getMonth() + 1
