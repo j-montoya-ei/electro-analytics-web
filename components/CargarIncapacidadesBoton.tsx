@@ -1,12 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Botón "Cargar incapacidades" (client component)
-// Sube el libro INCAPACIDADES_BASE_<AÑO> (.xls/.xlsx) a
-// /api/incapacidades/cargar, muestra el resumen y refresca.
-// La carga reemplaza SOLO el año del archivo; los demás años
-// quedan intactos.
-//
-// Ubicación: components/CargarIncapacidadesBoton.tsx
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -14,7 +5,6 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 
-// Resumen que devuelve fn_cargar_incapacidades
 type Resumen = {
   anio: number
   recibidas: number
@@ -32,7 +22,7 @@ export default function CargarIncapacidadesBoton() {
 
   async function onArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    e.target.value = '' // permite volver a subir el mismo archivo
+    e.target.value = '' 
     if (!file) return
 
     setCargando(true)
