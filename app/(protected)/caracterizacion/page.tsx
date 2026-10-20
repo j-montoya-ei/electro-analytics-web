@@ -1,11 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Caracterización del personal (#8)
-// Server Component: jala vw_caracterizacion (planta activa) y
-// arma KPIs + distribuciones. El conteo/agrupación es presentación;
-// las reglas (buckets, etiquetas, universo) viven en la vista SQL.
-// Ubicación: app/(protected)/caracterizacion/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import KpiCard from '@/components/KpiCard'
@@ -33,15 +25,12 @@ type Conteo = { label: string; value: number }
 
 const SIN_DATO = 'Sin dato'
 
-// Órdenes naturales para las dimensiones ordinales (espejo de los buckets del SQL).
 const ORDEN_EDAD = ['≤25', '26-35', '36-45', '46-55', '≥56']
 const ORDEN_ANTIG = ['<1 año', '1-3 años', '3-5 años', '5-10 años', '>10 años']
 const ORDEN_ESTRATO = [
   'Estrato 1', 'Estrato 2', 'Estrato 3', 'Estrato 4', 'Estrato 5', 'Estrato 6',
 ]
 
-// Cuenta filas por una dimensión. Con `orden` respeta ese orden; sin él, ordena
-// por conteo desc. En ambos casos "Sin dato" queda de último.
 function contarPor(rows: Fila[], key: keyof Fila, orden?: string[]): Conteo[] {
   const m = new Map<string, number>()
   for (const r of rows) {
@@ -130,7 +119,6 @@ export default async function CaracterizacionPage() {
   const filas = (data ?? []) as Fila[]
   const total = filas.length
 
-  // ─── KPIs ───────────────────────────────────────────────────────────
   const mujeres = filas.filter((f) => /fem/i.test(f.genero)).length
   const hombres = filas.filter((f) => /masc/i.test(f.genero)).length
   const pctG = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
@@ -148,7 +136,6 @@ export default async function CaracterizacionPage() {
     ? antigs.reduce((a, b) => a + b, 0) / antigs.length
     : 0
 
-  // ─── Distribuciones ─────────────────────────────────────────────────
   const porGenero = contarPor(filas, 'genero')
   const porEdad = contarPor(filas, 'rango_edad', ORDEN_EDAD)
   const porAntig = contarPor(filas, 'rango_antiguedad', ORDEN_ANTIG)
