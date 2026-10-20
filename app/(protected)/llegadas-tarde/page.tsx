@@ -1,14 +1,8 @@
-// ═══════════════════════════════════════════════════════════
-// Página Llegadas tarde - Acumulado por colaborador
-// Server Component: llama la función SQL por RPC y renderiza
-// Fuente única: fn_llegadas_tarde_por_colaborador(desde, hasta)
-// ═══════════════════════════════════════════════════════════
 import { createClient } from '@/lib/supabase/server'
 import LlegadasTardeTable from '@/components/LlegadasTardeTable'
 import LlegadasTardeFiltro from '@/components/LlegadasTardeFiltro'
 import LlegadasTardeKpis from '@/components/LlegadasTardeKpis'
 import CargarPermisosBoton from '@/components/CargarPermisosBoton'
-// Fecha actual en horario Colombia (mismo patrón que Inasistencias)
 function bogotaNow() {
   const now = new Date()
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
@@ -23,12 +17,10 @@ type Fila = {
   minutos_oficiales: number
   dias_despues_teorica: number
   minutos_teoricos: number
-  // ─── Tarde (regreso de almuerzo) ───
   tardanzas_tarde: number
   minutos_tarde_oficiales: number
   dias_despues_tarde: number
   minutos_tarde_teoricos: number
-  // ─── Totales (superó tolerancia: mañana + tarde) ───
   total_dias: number
   total_minutos: number
   costo_total: number
@@ -40,7 +32,6 @@ export default async function LlegadasTardePage({
   searchParams: Promise<{ desde?: string; hasta?: string }>
 }) {
   const { desde: qDesde, hasta: qHasta } = await searchParams
-  // Rango por defecto: mes en curso (Colombia)
   const d = bogotaNow()
   const year = d.getFullYear()
   const month = d.getMonth() + 1
