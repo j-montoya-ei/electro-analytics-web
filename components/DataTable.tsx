@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Componente DataTable - Tabla interactiva genérica (cliente)
-// Buscador + orden + paginación · esquema-agnóstica
-// Responsive: tabla en ≥md, tarjetas apiladas en móvil
-// Ubicación: components/DataTable.tsx  (componente ÚNICO de tabla)
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -17,7 +11,6 @@ import {
 
 type Row = Record<string, unknown>
 
-// 'nombre_completo' → 'Nombre Completo'
 function prettifyHeader(key: string) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
@@ -76,7 +69,6 @@ export default function DataTable({
     return rows
   }, [data, query, sortKey, sortDir])
 
-  // Vuelve a la página 1 cuando cambia el filtro o el orden
   useEffect(() => {
     setPage(1)
   }, [query, sortKey, sortDir])
@@ -95,7 +87,6 @@ export default function DataTable({
   const start = (current - 1) * pageSize
   const pageRows = filtered.slice(start, start + pageSize)
 
-  // Ícono de orden por columna (encabezados de la tabla desktop)
   const sortIcon = (col: string) =>
     sortKey === col ? (
       sortDir === 'asc' ? (
@@ -107,7 +98,6 @@ export default function DataTable({
       <ArrowUpDown className="h-3.5 w-3.5 text-gray-300" />
     )
 
-  // Sin datos de origen
   if (!data.length) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
