@@ -6,7 +6,6 @@ import { CalendarDays, Check, History, RotateCcw } from 'lucide-react'
 const pad = (n: number) => String(n).padStart(2, '0')
 const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-// "Hoy" en horario Colombia
 function bogotaHoy() {
   const now = new Date()
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }))
@@ -50,7 +49,7 @@ export default function HorasExtrasFiltro({
   }
 
   function historico() {
-    const ini = '2026-05-01' // inicio histórico solicitado por GH
+    const ini = '2026-05-01' 
     const fin = fmt(bogotaHoy())
     setD(ini); setH(fin)
     aplicar(ini, fin)
