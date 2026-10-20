@@ -5,12 +5,12 @@ import { createClient } from '@/lib/supabase/client'
 
 type DetalleDia = {
   fecha: string
-  momento: string // 'Mañana' | 'Tarde'
+  momento: string 
   hora_teorica: string
   limite_gracia: string
   hora_real: string
-  minutos: number            // desde la hora programada (principal)
-  minutos_tolerancia: number // sobre la tolerancia (referencia)
+  minutos: number            
+  minutos_tolerancia: number 
 }
 
 function fmtMin(min: number): string {
@@ -20,7 +20,7 @@ function fmtMin(min: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m} m`
 }
 
-// '13:30:00' → '13:30'
+
 const hhmm = (t: string) => (t ? t.slice(0, 5) : '—')
 
 function minutosDesdeMedianoche(t: string): number {
@@ -54,7 +54,6 @@ export default function LlegadasTardeDrilldown({
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Cerrar con tecla Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -85,7 +84,6 @@ export default function LlegadasTardeDrilldown({
     }
   }, [trabId, desde, hasta])
 
-  // KPIs del colaborador
   const totalDias = dias.length
   const totalMin = dias.reduce((s, d) => s + d.minutos, 0)
   const peor = dias.reduce<DetalleDia | null>(
