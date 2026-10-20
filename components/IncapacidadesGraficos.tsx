@@ -1,14 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// IncapacidadesGraficos (client component)
-// Recibe las filas YA filtradas y dibuja los paneles con Recharts.
-// Tooltips ENRIQUECIDOS: cada categoría muestra incap · días · valor
-// (como el HTML original). Agrega en memoria; las reglas de negocio
-// vienen resueltas desde vw_incapacidades. Cubre lo del BASE; el
-// recaudo va en la pista RECAUDO.
-//
-// Ubicación: components/IncapacidadesGraficos.tsx
-// ═══════════════════════════════════════════════════════════
-
 'use client'
 
 import { useMemo, useState, type ReactNode, type ReactElement } from 'react'
@@ -37,7 +26,6 @@ const num = (v: number | string | null | undefined) => {
   const n = typeof v === 'number' ? v : v == null ? 0 : Number(v)
   return Number.isFinite(n) ? n : 0
 }
-// Compacto para KPIs y ejes; completo para tooltips (ej. $2.240.262).
 const fmtCosto = (n: number) =>
   n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${n.toFixed(0)}`
 const fmtCOP = (n: number) =>
@@ -68,15 +56,11 @@ export type Row = {
   valor_tnl: number | string | null
   valor_cia_3dias: number | string | null
   valor_pendiente_cobrar: number | string | null
-  // De vw_incapacidades: solo el año en curso se compara con la plantilla
-  // activa de hoy (la plantilla de años anteriores no está disponible).
   es_anio_en_curso: boolean
-  // Por cobrar (regla en vw_incapacidades)
   por_cobrar_tipo: string | null
   valor_por_cobrar: number | string | null
 }
 
-// Por cobrar por entidad: radicado sin pagar + saldo en disputa
 type CobrarEnt = {
   name: string
   radicado: number
@@ -86,8 +70,6 @@ type CobrarEnt = {
   total: number
 }
 
-// Métricas agregadas por categoría (cargo, proceso, entidad, diagnóstico…)
-// valor = TOTAL INC = tnl (paga la EPS/ARL) + cia (asume la empresa)
 type Cat = { name: string; incap: number; dias: number; valor: number; tnl: number; cia: number }
 
 type Dim = 'proceso' | 'unidad' | 'cargo' | 'diagnostico'
@@ -113,7 +95,6 @@ export default function IncapacidadesGraficos({
 }) {
   const [dim, setDim] = useState<Dim>('proceso')
 
-  // ── Agregaciones ──────────────────────────────────────────────────
   const porMes = useMemo(() => {
     const m = new Map<string, { orden: number; incapacidades: number; dias: number }>()
     for (const r of rows) {
@@ -196,7 +177,6 @@ export default function IncapacidadesGraficos({
         incap: v.incap,
         trabajadores: v.trab.size,
         enCurso: v.enCurso,
-        // % solo para el año en curso: la plantilla activa es la de hoy
         pct:
           v.enCurso && plantilla && plantilla > 0
             ? Math.round((v.trab.size / plantilla) * 100)
@@ -225,7 +205,6 @@ export default function IncapacidadesGraficos({
       g.set(v, (g.get(v) ?? 0) + 1)
       grid.set(p, g)
     }
-    // Claves sintéticas: evitan que etiquetas con "." o "," rompan el dataKey.
     const labels = hayOtros ? [...top, 'Otros'] : top
     const series = labels.map((label, i) => ({ key: `s${i}`, label }))
     const data = [...periodos].sort().map((p) => {
@@ -502,7 +481,6 @@ export default function IncapacidadesGraficos({
   )
 }
 
-// ── Agregación por categoría con las 3 métricas ────────────────────
 function metricasPor(rows: Row[], key: (r: Row) => string, sortBy: 'dias' | 'incap'): Cat[] {
   const m = new Map<string, Cat>()
   for (const r of rows) {
@@ -518,7 +496,6 @@ function metricasPor(rows: Row[], key: (r: Row) => string, sortBy: 'dias' | 'inc
   return [...m.values()].sort((a, b) => b[sortBy] - a[sortBy])
 }
 
-// ── Tooltip enriquecido reutilizable ───────────────────────────────
 function TipBox({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
@@ -538,7 +515,6 @@ const CatTip = ({ active, payload }: TooltipProps<number, string>) => {
   )
 }
 
-// ── UI helpers ─────────────────────────────────────────────────────
 const tickX = { fontSize: 12, fill: '#6b7280' } as const
 const tipStyle = { borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 } as const
 
