@@ -1,11 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Botón "Cargar permisos" (client component)
-// Sube el reporte de Novedades (.xlsx) a /api/permisos/cargar,
-// muestra el resumen y refresca la data del server para que las
-// tardanzas se recalculen con los permisos recién cargados.
-//
-// Ubicación: components/CargarPermisosBoton.tsx
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -30,7 +22,7 @@ export default function CargarPermisosBoton() {
 
   async function onArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    e.target.value = '' // permite volver a subir el mismo archivo
+    e.target.value = '' 
     if (!file) return
 
     setCargando(true)
@@ -49,7 +41,7 @@ export default function CargarPermisosBoton() {
         setError(json?.error ?? 'No se pudo cargar el archivo')
       } else {
         setResumen(json.resumen as Resumen)
-        router.refresh() // recalcula tardanzas con los permisos nuevos
+        router.refresh() 
       }
     } catch {
       setError('Error de red al subir el archivo')
