@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Empleados - Listado con data real de Supabase
-// Server Component: hace el fetch y lo pasa a la DataTable unificada.
-// Ubicación: app/(protected)/empleados/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import DataTable from '@/components/DataTable'
 
