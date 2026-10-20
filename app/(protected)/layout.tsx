@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Layout Protegido - Aplica a todas las páginas que requieren login
-// Incluye: Sidebar de navegación + Header superior
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
