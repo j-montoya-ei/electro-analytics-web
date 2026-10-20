@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Server Actions - Manejo de login
-// Se ejecutan en el servidor cuando el usuario da submit
-// ═══════════════════════════════════════════════════════════
 
 'use server'
 
@@ -31,7 +27,6 @@ export async function login(formData: FormData) {
     redirect(`/login?error=${errorCode}`)
   }
 
-  // Login exitoso → refresca el layout y va a la home
   revalidatePath('/', 'layout')
   redirect('/')
 }
