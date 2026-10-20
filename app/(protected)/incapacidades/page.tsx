@@ -1,12 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Incapacidades
-// Server Component: jala vw_incapacidades (+ conteo de plantilla
-// activa para la proporción por año) y delega el tablero al
-// cliente IncapacidadesDashboard. Mantiene el botón de carga.
-//
-// Ubicación: app/(protected)/incapacidades/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import { leerTodo } from '@/lib/supabase/leerTodo'
 import CargarIncapacidadesBoton from '@/components/CargarIncapacidadesBoton'
@@ -20,10 +11,7 @@ export default async function IncapacidadesPage() {
   const supabase = await createClient()
 
   const [incap, planta] = await Promise.all([
-    // Por páginas: Supabase corta en 1000 filas y con varios años se supera.
-    // Orden único (anio, id_incapacidad); el tablero ordena por mes por su cuenta.
     leerTodo<IncapacidadRow>(supabase, 'vw_incapacidades', ['anio', 'id_incapacidad']),
-    // Plantilla activa para la proporción por año (si falla, queda null).
     supabase.from('vw_caracterizacion').select('*', { count: 'exact', head: true }),
   ])
 
