@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fmtHorasMin } from '@/lib/formatHoras'
 
-// Mismo tipo que devuelve fn_horas_extras_por_colaborador (subconjunto usado aquí)
 type Fila = {
   dni: string
   nombre_completo: string | null
@@ -47,9 +46,7 @@ const TIPO: Record<ColKey, 'texto' | 'num'> = {
   meses_supera_48h: 'num',
 }
 
-// Formatea horas como "2 h 13 min", "—" si es 0 (para no saturar la tabla de ceros)
 const fmtH = (h: number) => (Number(h) > 0 ? fmtHorasMin(h) : '—')
-// Formatea COP sin decimales: $1.234.567
 const fmtCOP = (v: number) => '$' + Math.round(v).toLocaleString('es-CO')
 const PAGE_SIZE = 10
 
@@ -60,7 +57,6 @@ export default function HorasExtrasTable({
   desde: string
   hasta: string
 }) {
-  // Arranca por total de horas extra reales, mayor a menor (igual que la función SQL)
   const [sortKey, setSortKey] = useState<ColKey>('horas_extra_reales')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [pagina, setPagina] = useState(1)
