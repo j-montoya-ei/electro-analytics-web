@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página HOME (/) — Caracterización del personal
-// Server Component: hace los fetch, cuenta, y pasa lo dibujable al cliente.
-// Ubicación: app/(protected)/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import KpiCard from '@/components/KpiCard'
 import CaracterizacionGraficos from '@/components/CaracterizacionGraficos'
@@ -82,7 +76,6 @@ export default async function HomePage() {
   const filas = (carac.data ?? []) as Fila[]
   const total = filas.length
 
-  // ─── KPIs de planta ─────────────────────────────────────────────────
   const mujeres = filas.filter((f) => /fem/i.test(f.genero)).length
   const hombres = filas.filter((f) => /masc/i.test(f.genero)).length
   const indefinidos = filas.filter((f) => /indefinido/i.test(f.tipo_contrato)).length
@@ -101,7 +94,6 @@ export default async function HomePage() {
     ? antigs.reduce((a, b) => a + b, 0) / antigs.length
     : 0
 
-  // ─── Distribuciones ─────────────────────────────────────────────────
   const porGenero = contarPor(filas, 'genero')
   const porEdad = contarPor(filas, 'rango_edad', ORDEN_EDAD)
   const porAntig = contarPor(filas, 'rango_antiguedad', ORDEN_ANTIG)
