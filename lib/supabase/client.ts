@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Cliente Supabase para el NAVEGADOR (client-side)
-// Se usa en componentes React que corren en el navegador
-// ═══════════════════════════════════════════════════════════
-
 import { createBrowserClient } from '@supabase/ssr'
 
 export function hasSupabaseConfig() {
