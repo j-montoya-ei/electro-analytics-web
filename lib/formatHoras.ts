@@ -1,6 +1,3 @@
-// Formatea horas decimales como "2 h 13 min" (redondeado al minuto).
-// Buk entrega segundos; el costo se calcula en SQL con el tiempo exacto,
-// esto es solo visualización.
 export function fmtHorasMin(horas: number | string | null | undefined): string {
   const totalMin = Math.round(Number(horas ?? 0) * 60)
   if (!Number.isFinite(totalMin) || totalMin <= 0) return '0 min'
