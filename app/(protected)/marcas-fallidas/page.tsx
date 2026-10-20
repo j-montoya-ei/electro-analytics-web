@@ -1,13 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página Marcas fallidas (Requerimiento #5)
-// Server Component: llama las funciones SQL por RPC y renderiza
-//   - fn_marcas_fallidas_por_colaborador(desde, hasta)  → ranking
-//   - fn_marcas_fallidas_por_error(desde, hasta)         → frecuencia
-// El detalle por colaborador (drilldown) lo maneja MarcasFallidasTable.
-//
-// Ubicación: app/(protected)/marcas-fallidas/page.tsx
-// ═══════════════════════════════════════════════════════════
-
 import { createClient } from '@/lib/supabase/server'
 import MarcasFallidasFiltro from '@/components/MarcasFallidasFiltro'
 import CargarMarcasFallidasBoton from '@/components/CargarMarcasFallidasBoton'
@@ -36,7 +26,6 @@ export default async function MarcasFallidasPage({
 }) {
   const { desde: qDesde, hasta: qHasta } = await searchParams
 
-  // Rango por defecto: mes en curso (Colombia)
   const d = bogotaNow()
   const year = d.getFullYear()
   const month = d.getMonth() + 1
