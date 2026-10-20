@@ -1,14 +1,8 @@
-// ═══════════════════════════════════════════════════════════
-// Componente KpiCard - Tarjeta de indicador reutilizable
-// API SIN CAMBIOS: { label, value, icon, tone }. Solo rediseño visual.
-// Ubicación: components/KpiCard.tsx
-// ═══════════════════════════════════════════════════════════
 
 import type { ReactNode } from 'react'
 
 type Tone = 'blue' | 'yellow' | 'gray' | 'red' | 'green'
 
-// Color del chip del ícono (fondo suave + ícono a tono)
 const chip: Record<Tone, string> = {
   blue: 'bg-blue-50 text-[#00369C]',
   yellow: 'bg-amber-50 text-[#B58A00]',
@@ -17,7 +11,6 @@ const chip: Record<Tone, string> = {
   green: 'bg-emerald-50 text-emerald-600',
 }
 
-// Acento lateral izquierdo: distingue una categoría de indicador de otra
 const accent: Record<Tone, string> = {
   blue: 'bg-[#00369C]',
   yellow: 'bg-[#B58A00]',
