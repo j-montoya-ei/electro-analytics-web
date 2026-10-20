@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Página de Login - Electro Analytics
-// Formulario para autenticar usuarios via Supabase Auth
-// ═══════════════════════════════════════════════════════════
-
 import { login } from './actions'
 import Image from 'next/image'
 
@@ -103,7 +98,6 @@ export default function LoginPage({
   )
 }
 
-// Componente que muestra error si viene ?error=xxx en la URL
 async function ErrorMessage({
   searchParams,
 }: {
