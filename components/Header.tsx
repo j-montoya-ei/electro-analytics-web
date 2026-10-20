@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Componente Header - Barra superior
-// Muestra: título de módulo, usuario logueado, logout
-// ═══════════════════════════════════════════════════════════
 
 'use client'
 
@@ -23,7 +19,6 @@ export default function Header({ userEmail }: { userEmail: string | undefined })
   const pathname = usePathname()
   const title = routeTitles[pathname] || 'Gestión Humana'
 
-  // Generar iniciales del email para el avatar
   const getInitials = (email: string | undefined) => {
     if (!email) return '?'
     const namePart = email.split('@')[0]
