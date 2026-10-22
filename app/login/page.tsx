@@ -4,7 +4,7 @@ import Image from 'next/image'
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; mensaje?: string }>
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f4f6fa] p-4 sm:p-8">
@@ -101,9 +101,18 @@ export default function LoginPage({
 async function ErrorMessage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; mensaje?: string }>
 }) {
   const params = await searchParams
+  if (params.mensaje === 'password_actualizada') {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+        <p className="text-sm text-green-700">
+          Contraseña actualizada. Ingresa con tu nueva contraseña.
+        </p>
+      </div>
+    )
+  }
   if (!params.error) return null
 
   return (
