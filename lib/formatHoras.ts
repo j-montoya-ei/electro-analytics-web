@@ -6,4 +6,4 @@ export function fmtHorasMin(horas: number | string | null | undefined): string {
   if (h === 0) return `${m} min`
   if (m === 0) return `${h} h`
   return `${h} h ${m} min`
-}
+} 
