@@ -5,8 +5,8 @@ import { createClient as createSupabaseJs } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Reglas acordadas: mínimo 10 caracteres, al menos una letra y un número
-const MIN_LONGITUD = 10
+// Reglas acordadas: mínimo 6 caracteres (igual que Supabase), al menos una letra y un número
+const MIN_LONGITUD = 6
 
 function esValida(password: string) {
   return (

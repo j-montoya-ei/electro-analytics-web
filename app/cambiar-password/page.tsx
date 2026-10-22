@@ -5,7 +5,7 @@ import { cambiarPassword } from './actions'
 const MENSAJES: Record<string, string> = {
   campos: 'Completa todos los campos.',
   no_coinciden: 'La nueva contraseña y su confirmación no coinciden.',
-  debil: 'La contraseña debe tener mínimo 10 caracteres, con letras y números.',
+  debil: 'La contraseña debe tener mínimo 6 caracteres, con letras y números.',
   igual: 'La nueva contraseña debe ser distinta de la actual.',
   actual_incorrecta: 'La contraseña actual no es correcta.',
   error: 'No se pudo cambiar la contraseña. Intenta nuevamente.',
@@ -52,15 +52,15 @@ export default async function CambiarPasswordPage({
             <label htmlFor="nueva" className="mb-2 block text-sm font-semibold text-slate-700">
               Nueva contraseña
             </label>
-            <input id="nueva" name="nueva" type="password" required minLength={10} autoComplete="new-password" className={inputClass} />
-            <p className="mt-1 text-xs text-slate-500">Mínimo 10 caracteres, con letras y números.</p>
+            <input id="nueva" name="nueva" type="password" required minLength={6} autoComplete="new-password" className={inputClass} />
+            <p className="mt-1 text-xs text-slate-500">Mínimo 6 caracteres, con letras y números.</p>
           </div>
 
           <div>
             <label htmlFor="confirmar" className="mb-2 block text-sm font-semibold text-slate-700">
               Confirmar nueva contraseña
             </label>
-            <input id="confirmar" name="confirmar" type="password" required minLength={10} autoComplete="new-password" className={inputClass} />
+            <input id="confirmar" name="confirmar" type="password" required minLength={6} autoComplete="new-password" className={inputClass} />
           </div>
 
           {mensaje && (
